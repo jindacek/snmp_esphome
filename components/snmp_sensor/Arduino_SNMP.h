@@ -9,7 +9,7 @@
     #define SNMP_PACKET_LENGTH 256
 #endif
 
-#include <UDP.h>
+#include <WiFiUdp.h>
 
 #include "BER.h"
 #include "VarBinds.h"
