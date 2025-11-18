@@ -2,6 +2,6 @@
   "name": "snmp_esphome",
   "version": "1.0",
   "build": {
-    "include": "components"
+    "include": "esphome"
   }
 }
