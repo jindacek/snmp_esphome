@@ -1,16 +1,25 @@
 #pragma once
+
 #include <Arduino.h>
 #include <WiFiUdp.h>
-#include "snmp_packet.h"
 
 class SnmpClient {
- public:
-  bool begin(uint16_t local_port = 16100);
+public:
+  SnmpClient();
+
+  bool begin(uint16_t local_port = 161);
+
   bool get(const char *host,
            const char *community,
            const char *oid,
-           long *out_value);
+           long *value);
 
- private:
+private:
   WiFiUDP udp_;
+
+  int build_snmp_get_packet(uint8_t *buf, int buf_size,
+                            const char *community,
+                            const char *oid);
+
+  bool parse_snmp_response(uint8_t *buf, int len, long *value);
 };
