@@ -7,12 +7,12 @@ namespace snmp_sensor {
 
 static const char *TAG = "snmp_sensor";
 
-// Globální SNMP klient
-static SNMPManager snmp;
+// Jeden globální SNMP klient pro všechny instance
+static SnmpClient snmp_client;
 
 void SnmpSensor::setup() {
-  ESP_LOGI(TAG, "Initializing SNMP manager...");
-  snmp.begin();
+  ESP_LOGI(TAG, "Initializing SNMP client...");
+  snmp_client.begin();  // lokální port 16100 (default)
 }
 
 void SnmpSensor::update() {
@@ -20,13 +20,11 @@ void SnmpSensor::update() {
            host_.c_str(), community_.c_str(), oid_.c_str());
 
   long value = 0;
-
-  bool ok = snmp.get(
+  bool ok = snmp_client.get(
       host_.c_str(),
       community_.c_str(),
       oid_.c_str(),
-      &value
-  );
+      &value);
 
   if (!ok) {
     ESP_LOGW(TAG, "SNMP GET FAILED for oid=%s", oid_.c_str());
@@ -35,9 +33,8 @@ void SnmpSensor::update() {
   }
 
   ESP_LOGI(TAG, "SNMP OK: %ld", value);
-
-  this->publish_state((float)value);
+  this->publish_state((float) value);
 }
 
-} // namespace snmp_sensor
-} // namespace esphome
+}  // namespace snmp_sensor
+}  // namespace esphome
