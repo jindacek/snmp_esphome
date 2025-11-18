@@ -1,15 +1,15 @@
-#pragma once
-
-#include "esphome/core/component.h"
-#include "esphome/components/sensor/sensor.h"
+#include "snmp_sensor.h"
+#include "esphome/core/log.h"
 
 namespace esphome {
 namespace snmp_sensor {
 
-class SnmpSensor : public sensor::Sensor, public PollingComponent {
- public:
-  void update() override;
-};
+static const char *TAG = "snmp_sensor";
+
+void SnmpSensor::update() {
+  ESP_LOGD(TAG, "SnmpSensor update() called");
+  // tady později doplníme SNMP dotaz
+}
 
 }  // namespace snmp_sensor
 }  // namespace esphome
