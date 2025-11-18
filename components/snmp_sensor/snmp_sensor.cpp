@@ -1,30 +1,47 @@
 #include "snmp_sensor.h"
 #include "esphome/core/log.h"
+#include <Arduino_SNMP.h>
 
 namespace esphome {
 namespace snmp_sensor {
 
 static const char *TAG = "snmp_sensor";
 
-// -----------------------------------------------------
-// Setup – zatím prázdné, jen log
-// -----------------------------------------------------
+static SNMPManager snmp;   // SNMP manager instance
+
 void SnmpSensor::setup() {
   ESP_LOGI(TAG, "SNMP sensor initialized");
+
+  snmp.begin();  // init SNMP stack
 }
 
-// -----------------------------------------------------
-// Update – zde později bude SNMP GET
-// -----------------------------------------------------
 void SnmpSensor::update() {
-  ESP_LOGD(TAG, "SNMP request: host=%s, community=%s, oid=%s",
+  ESP_LOGD(TAG, "SNMP GET: %s %s %s",
            host_.c_str(), community_.c_str(), oid_.c_str());
 
-  // ZATÍM: jen placeholder
-  // Ať to kompiluje, funguje a je připravené.
-  float dummy_value = 0.0f;
+  IPAddress target;
+  target.fromString(host_.c_str());
 
-  this->publish_state(dummy_value);
+  SNMPRequest request(target, community_.c_str(), oid_.c_str());
+
+  // Non-blocking request
+  SNMPResponse response = snmp.send(request);
+
+  if (response.error != SNMP_ERR_NOERROR) {
+    ESP_LOGW(TAG, "SNMP error: %d", response.error);
+    this->publish_state(0);
+    return;
+  }
+
+  if (response.type == SNMP_TYPE_INTEGER) {
+    int value = response.value.integer;
+    ESP_LOGI(TAG, "SNMP INTEGER: %d", value);
+    this->publish_state(value);
+    return;
+  }
+
+  ESP_LOGW(TAG, "Unsupported SNMP type %d", response.type);
+  this->publish_state(0);
 }
 
 }  // namespace snmp_sensor
