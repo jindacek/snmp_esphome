@@ -1,1 +1,2 @@
-# init file
+from .component import snmp_ns
+
