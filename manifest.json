@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "build": {
     "include": [
-      "components/snmp_sensor"
+      "esphome/components/snmp_sensor"
     ]
   }
 }
