@@ -1,13 +1,16 @@
 #pragma once
 
-#include "esphome/components/sensor/sensor.h"
 #include "esphome/core/component.h"
+#include "esphome/components/sensor/sensor.h"
 
 namespace esphome {
 namespace snmp_sensor {
 
-class SnmpSensor : public sensor::Sensor, public Component {
+class SnmpSensor : public PollingComponent, public sensor::Sensor {
  public:
+  // Konstruktor musí přijmout interval – ESPHome to vyžaduje
+  SnmpSensor() : PollingComponent(2000) {}   // default 2000 ms
+
   void setup() override;
   void update() override;
 
