@@ -1,6 +1,7 @@
 #include "snmp_sensor.h"
 #include "esphome/core/log.h"
-#include <Arduino_SNMP.h>
+#include "Arduino_SNMP/Arduino_SNMP.h"
+
 
 namespace esphome {
 namespace snmp_sensor {
