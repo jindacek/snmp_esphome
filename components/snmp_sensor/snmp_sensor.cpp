@@ -1,6 +1,6 @@
 #include "snmp_sensor.h"
 #include "esphome/core/log.h"
-#include "SNMPManager.h"
+#include "snmp_client.h"
 
 namespace esphome {
 namespace snmp_sensor {
