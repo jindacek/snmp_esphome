@@ -3,7 +3,10 @@
   "version": "1.0.0",
   "build": {
     "include": [
-      "esphome/components/snmp_sensor"
+      "components/snmp_sensor"
+    ],
+    "libraries": [
+      "staianoweb/Arduino SNMP"
     ]
   }
 }
