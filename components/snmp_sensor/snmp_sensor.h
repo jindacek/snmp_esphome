@@ -12,6 +12,7 @@ class SnmpSensor : public sensor::Sensor, public PollingComponent {
   void set_community(const std::string &community) { community_ = community; }
   void set_oid(const std::string &oid) { oid_ = oid; }
 
+  void setup() override;
   void update() override;
 
  protected:
