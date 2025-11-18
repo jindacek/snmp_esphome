@@ -1,0 +1,14 @@
+name: "snmp_sensor"
+version: "1.0.0"
+esphome:
+  min_version: 2023.4.0
+
+requires:
+  # načtení Python části
+  python: ">=3.9"
+
+files:
+  - snmp_sensor.cpp
+  - snmp_sensor.h
+  - component.py
+  - sensor.py
