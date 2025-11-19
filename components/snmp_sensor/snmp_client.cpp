@@ -15,7 +15,10 @@ bool SnmpClient::begin(uint16_t local_port) {
   return true;
 }
 
-bool SnmpClient::get(const char *host, const char *community, const char *oid, long *value) {
+bool SnmpClient::get(const char *host,
+                     const char *community,
+                     const char *oid,
+                     long *value) {
   IPAddress ip;
   if (!ip.fromString(host)) {
     ESP_LOGE(TAG, "Invalid host: %s", host);
@@ -29,12 +32,10 @@ bool SnmpClient::get(const char *host, const char *community, const char *oid, l
     return false;
   }
 
-  // SEND SNMP GET
   udp_.beginPacket(ip, 161);
   udp_.write(packet, len);
   udp_.endPacket();
 
-  // WAIT FOR RESPONSE
   uint32_t deadline = millis() + 500;
   while (millis() < deadline) {
     int size = udp_.parsePacket();
@@ -42,10 +43,7 @@ bool SnmpClient::get(const char *host, const char *community, const char *oid, l
       uint8_t buffer[256];
       int n = udp_.read(buffer, sizeof(buffer));
       if (n > 0) {
-        bool ok = parse_snmp_response(buffer, n, value);
-        if (!ok)
-          ESP_LOGW(TAG, "Failed to parse SNMP response");
-        return ok;
+        return parse_snmp_response(buffer, n, value);
       }
     }
   }
@@ -55,21 +53,69 @@ bool SnmpClient::get(const char *host, const char *community, const char *oid, l
 }
 
 
-
 // ---------------------------------------------------------
-//  BUILD SNMP GET PACKET (minimalist SNMPv1 GET)
+// Convert OID string "1.3.6.1.4..." → BER encoded bytes
+// ---------------------------------------------------------
+int encode_oid(const char *oid_str, uint8_t *output) {
+  uint32_t parts[32];
+  int count = 0;
+
+  const char *p = oid_str;
+  while (*p && count < 32) {
+    parts[count++] = strtoul(p, (char **)&p, 10);
+    if (*p == '.') p++;
+  }
+
+  if (count < 2) return 0;
+
+  int out = 0;
+
+  // first byte = 40 * first + second
+  output[out++] = 40 * parts[0] + parts[1];
+
+  // subsequent bytes encoded in base-128
+  for (int i = 2; i < count; i++) {
+    uint32_t v = parts[i];
+    uint8_t stack[5];
+    int sp = 0;
+
+    do {
+      stack[sp++] = v & 0x7F;
+      v >>= 7;
+    } while (v);
+
+    for (int j = sp - 1; j >= 0; j--) {
+      uint8_t b = stack[j];
+      if (j != 0)
+        b |= 0x80;
+      output[out++] = b;
+    }
+  }
+
+  return out;
+}
+
+
 // ---------------------------------------------------------
 int SnmpClient::build_snmp_get_packet(uint8_t *buf, int buf_size,
-                                      const char *community, const char *oid) {
+                                      const char *community,
+                                      const char *oid_str) {
   int p = 0;
 
-  if (buf_size < 64) return 0;
+  uint8_t oid_encoded[64];
+  int oid_len = encode_oid(oid_str, oid_encoded);
+  if (oid_len <= 0) {
+    ESP_LOGE(TAG, "OID encode failed for %s", oid_str);
+    return 0;
+  }
 
-  // SEQUENCE
-  buf[p++] = 0x30;
-  buf[p++] = 0x20;
+  // Sequence
+  buf[p++] = 0x30; // SEQ
+  buf[p++] = 0x00; // filled later
 
-  // version = 0
+  int seq_start = p;
+
+  // version
   buf[p++] = 0x02; buf[p++] = 0x01; buf[p++] = 0x00;
 
   // community
@@ -78,85 +124,87 @@ int SnmpClient::build_snmp_get_packet(uint8_t *buf, int buf_size,
   memcpy(&buf[p], community, strlen(community));
   p += strlen(community);
 
-  // GET request PDU
+  // GET PDU
   buf[p++] = 0xA0;
-  buf[p++] = 0x14;
+  buf[p++] = 0x00; // fill later
+  int pdu_start = p;
 
-  // request id
+  // request-id
   buf[p++] = 0x02; buf[p++] = 0x01; buf[p++] = 0x01;
 
-  // error status
+  // error-status
   buf[p++] = 0x02; buf[p++] = 0x01; buf[p++] = 0x00;
 
-  // error index
+  // error-index
   buf[p++] = 0x02; buf[p++] = 0x01; buf[p++] = 0x00;
 
   // varbind list
-  buf[p++] = 0x30; buf[p++] = 0x0A;
+  buf[p++] = 0x30;
+  buf[p++] = 0x00; // fill later
+  int vbl_start = p;
 
   // varbind
-  buf[p++] = 0x30; buf[p++] = 0x08;
+  buf[p++] = 0x30;
+  buf[p++] = 0x00; // fill later
+  int vb_start = p;
 
   // OID
   buf[p++] = 0x06;
-
-  // HARD-CODED OID (zatím test) → změníme později podle tvojeho OID
-  uint8_t oid_bytes[] = {1,3,6,1};
-  buf[p++] = sizeof(oid_bytes);
-  memcpy(&buf[p], oid_bytes, sizeof(oid_bytes));
-  p += sizeof(oid_bytes);
+  buf[p++] = oid_len;
+  memcpy(&buf[p], oid_encoded, oid_len);
+  p += oid_len;
 
   // NULL
-  buf[p++] = 0x05; buf[p++] = 0x00;
+  buf[p++] = 0x05;
+  buf[p++] = 0x00;
+
+  // fix lengths
+  buf[vb_start - 1] = p - vb_start;                           // varbind length
+  buf[vbl_start - 1] = p - vbl_start - 2;                     // vbl length
+  buf[pdu_start - 1] = p - pdu_start - 2;                     // PDU len
+  buf[1] = p - 2;                                             // total SEQ len
 
   return p;
 }
 
 
-
-// ---------------------------------------------------------
-//  PARSE SNMP RESPONSE – correct varbind decoding
 // ---------------------------------------------------------
 bool SnmpClient::parse_snmp_response(uint8_t *buf, int len, long *value) {
-
   int i = 0;
 
-  // Expect SEQUENCE
   if (buf[i++] != 0x30) return false;
-  i++; // skip total length
+  int total = buf[i++];
 
-  // Locate GetResponse-PDU (A2)
+  // find response PDU (A2)
   while (i < len && buf[i] != 0xA2) i++;
   if (i >= len) return false;
-
   i++; // skip tag
-  i++; // skip PDU length
 
-  // Skip: request-id, error-status, error-index
+  int pdu_len = buf[i++];
+
+  // skip request-id, error-status, error-index
   for (int k = 0; k < 3; k++) {
-    if (buf[i++] != 0x02) return false;  // INTEGER
+    if (buf[i++] != 0x02) return false;
     int l = buf[i++];
     i += l;
-    if (i >= len) return false;
   }
 
-  // Varbind-list
+  // varbind list
   if (buf[i++] != 0x30) return false;
   int vbl_len = buf[i++];
   int vbl_end = i + vbl_len;
 
-  // Varbind
+  // varbind
   if (buf[i++] != 0x30) return false;
   int vb_len = buf[i++];
   int vb_end = i + vb_len;
 
-  // OID
+  // skip OID
   if (buf[i++] != 0x06) return false;
   int oid_len = buf[i++];
   i += oid_len;
 
-  // VALUE (INTEGER / UNSIGNED)
-  uint8_t type = buf[i++];   // 0x02 = INTEGER, 0x41 = Gauge32 / Unsigned
+  uint8_t type = buf[i++]; // 0x41 Gauge32, 0x02 Integer
   int l = buf[i++];
 
   if (l <= 0 || l > 4 || i + l > len) return false;
