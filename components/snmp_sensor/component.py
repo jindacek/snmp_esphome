@@ -1,7 +1,7 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome.components import sensor
-from esphome.const import CONF_ID, CONF_HOST, CONF_PORT
+from esphome.const import CONF_ID, CONF_PORT
 
 DEPENDENCIES = ['network']
 AUTO_LOAD = ['sensor']
@@ -11,6 +11,7 @@ SNMPSensor = snmp_ns.class_('SNMPSensor', sensor.Sensor, cg.Component)
 
 CONF_COMMUNITY = 'community'
 CONF_OID = 'oid'
+CONF_HOST = 'host'
 
 CONFIG_SCHEMA = sensor.SENSOR_SCHEMA.extend({
     cv.GenerateID(): cv.declare_id(SNMPSensor),
