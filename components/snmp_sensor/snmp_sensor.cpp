@@ -7,8 +7,15 @@ namespace snmp_sensor {
 static const char *TAG = "snmp_sensor";
 
 void SnmpSensor::setup() {
-  ESP_LOGI(TAG, "Component setup completed (waiting for WiFi)");
+  ESP_LOGI(TAG, "Initializing SNMP client...");
+
+  if (!snmp_.begin(50000)) {
+    ESP_LOGE(TAG, "Failed to start SNMP client on port 50000!");
+  } else {
+    ESP_LOGI(TAG, "SNMP client ready on local port 50000");
+  }
 }
+
 
 void SnmpSensor::on_wifi_ready() {
   ESP_LOGI(TAG, "WiFi is ready – starting SNMP client...");
