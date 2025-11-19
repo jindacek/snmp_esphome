@@ -7,20 +7,13 @@ namespace snmp_sensor {
 static const char *TAG = "snmp_sensor";
 
 void SnmpSensor::setup() {
-  ESP_LOGI(TAG, "SNMP sensor setup – waiting for WiFi...");
-  // NESMÍME zde volat snmp_.begin(), jinak přijde crash
-}
+  ESP_LOGI(TAG, "Initializing SNMP client...");
 
-void SnmpSensor::on_wifi_ready() {
-  ESP_LOGI(TAG, "WiFi ready – starting SNMP client");
-
-  // Každý senzor → vlastní port podle OID hash
-  uint16_t port = 40000 + (uint16_t)(std::hash<std::string>{}(oid_) % 20000);
-
-  if (!snmp_.begin(port)) {
-    ESP_LOGE(TAG, "Failed to start SNMP client on port %u!", port);
+  // použití portu 50000, 161 necháme UPSce
+  if (!snmp_.begin(50000)) {
+    ESP_LOGE(TAG, "Failed to start SNMP client on port 50000!");
   } else {
-    ESP_LOGI(TAG, "SNMP client started on local UDP port %u", port);
+    ESP_LOGI(TAG, "SNMP client ready on local port 50000");
   }
 }
 
