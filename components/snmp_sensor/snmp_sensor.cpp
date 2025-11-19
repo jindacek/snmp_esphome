@@ -16,14 +16,19 @@ void SnmpSensor::setup() {
 }
 
 void SnmpSensor::update() {
-  static bool snmp_inited = false;
+  ESP_LOGD(TAG, "SNMP GET host=%s community=%s oid=%s",
+           host_.c_str(), community_.c_str(), oid_.c_str());
 
-  // Lazy inicializace SNMP klienta – až při prvním update
-  if (!snmp_inited) {
-    ESP_LOGI(TAG, "Initializing SNMP client...");
-    snmp_.begin(3001);        // používá WiFiUDP::begin(...)
-    snmp_inited = true;
+  long value = 0;
+  if (snmp_.get(host_.c_str(), community_.c_str(), oid_.c_str(), &value)) {
+    ESP_LOGI(TAG, "SNMP OK: %ld", value);
+    this->publish_state((float) value);
+  } else {
+    ESP_LOGW(TAG, "SNMP GET FAILED for oid=%s", oid_.c_str());
+    this->publish_state(NAN);
   }
+}
+
 
   ESP_LOGD(TAG, "SNMP GET host=%s community=%s oid=%s",
            host_.c_str(), community_.c_str(), oid_.c_str());
