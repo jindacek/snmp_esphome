@@ -2,6 +2,8 @@
 #include <lwip/sockets.h>
 #include <lwip/netdb.h>
 #include <errno.h>
+#include <sstream>  // Přidáno pro std::istringstream
+#include <string>   // Přidáno pro std::string
 
 namespace esphome {
 namespace snmp {
@@ -33,8 +35,8 @@ bool SnmpSensor::send_snmp_query() {
     return false;
   }
 
-  // Create socket
-  int sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+  // Create socket - OPRAVA: použijeme správné konstanty
+  int sockfd = socket(AF_INET, SOCK_DGRAM, 0);  // IPPROTO_UDP je 0 pro UDP
   if (sockfd < 0) {
     ESP_LOGE(TAG, "Failed to create socket: %d", errno);
     return false;
@@ -107,49 +109,43 @@ bool SnmpSensor::send_snmp_query() {
 std::vector<uint8_t> SnmpSensor::build_snmp_packet() {
   std::vector<uint8_t> packet;
   
-  try {
-    // SNMP Message Sequence
-    packet.insert(packet.end(), {0x30, 0x29}); // SEQUENCE, length 41 bytes
-    
-    // Version: INTEGER 0 (SNMPv1)
-    packet.insert(packet.end(), {0x02, 0x01, 0x00});
-    
-    // Community: OCTET STRING
-    packet.push_back(0x04); // OCTET STRING
-    packet.push_back(this->community_.length());
-    packet.insert(packet.end(), this->community_.begin(), this->community_.end());
-    
-    // PDU: Get Request
-    packet.insert(packet.end(), {0xA0, 0x1C}); // GetRequest PDU, length 28 bytes
-    
-    // Request ID
-    packet.insert(packet.end(), {0x02, 0x04, 0x00, 0x00, 0x00, 0x01});
-    
-    // Error status
-    packet.insert(packet.end(), {0x02, 0x01, 0x00});
-    
-    // Error index
-    packet.insert(packet.end(), {0x02, 0x01, 0x00});
-    
-    // Variable bindings
-    packet.insert(packet.end(), {0x30, 0x0E}); // SEQUENCE, length 14 bytes
-    
-    // Single variable binding
-    packet.insert(packet.end(), {0x30, 0x0C}); // SEQUENCE, length 12 bytes
-    
-    // OID
-    std::string oid_bytes = this->oid_to_bytes(this->oid_);
-    packet.push_back(0x06); // OBJECT IDENTIFIER
-    packet.push_back(oid_bytes.length());
-    packet.insert(packet.end(), oid_bytes.begin(), oid_bytes.end());
-    
-    // Value (null)
-    packet.insert(packet.end(), {0x05, 0x00}); // NULL
-    
-  } catch (const std::exception& e) {
-    ESP_LOGE(TAG, "Exception building SNMP packet: %s", e.what());
-    return std::vector<uint8_t>();
-  }
+  // SNMP Message Sequence
+  packet.insert(packet.end(), {0x30, 0x29}); // SEQUENCE, length 41 bytes
+  
+  // Version: INTEGER 0 (SNMPv1)
+  packet.insert(packet.end(), {0x02, 0x01, 0x00});
+  
+  // Community: OCTET STRING
+  packet.push_back(0x04); // OCTET STRING
+  packet.push_back(this->community_.length());
+  packet.insert(packet.end(), this->community_.begin(), this->community_.end());
+  
+  // PDU: Get Request
+  packet.insert(packet.end(), {0xA0, 0x1C}); // GetRequest PDU, length 28 bytes
+  
+  // Request ID
+  packet.insert(packet.end(), {0x02, 0x04, 0x00, 0x00, 0x00, 0x01});
+  
+  // Error status
+  packet.insert(packet.end(), {0x02, 0x01, 0x00});
+  
+  // Error index
+  packet.insert(packet.end(), {0x02, 0x01, 0x00});
+  
+  // Variable bindings
+  packet.insert(packet.end(), {0x30, 0x0E}); // SEQUENCE, length 14 bytes
+  
+  // Single variable binding
+  packet.insert(packet.end(), {0x30, 0x0C}); // SEQUENCE, length 12 bytes
+  
+  // OID
+  std::string oid_bytes = this->oid_to_bytes(this->oid_);
+  packet.push_back(0x06); // OBJECT IDENTIFIER
+  packet.push_back(oid_bytes.length());
+  packet.insert(packet.end(), oid_bytes.begin(), oid_bytes.end());
+  
+  // Value (null)
+  packet.insert(packet.end(), {0x05, 0x00}); // NULL
   
   return packet;
 }
@@ -170,35 +166,51 @@ std::string SnmpSensor::oid_to_bytes(const std::string &oid) {
     return std::string("\x2b\x06\x01\x04\x01\x4e\x01\x01\x01\x04\x02\x03\x00", 13);
   }
   
-  // Fallback for unknown OIDs - try basic conversion
+  // Fallback for unknown OIDs - zjednodušená konverze bez stringstream
   ESP_LOGW(TAG, "Unknown OID, using fallback conversion: %s", oid.c_str());
   std::vector<uint8_t> result;
   
-  // Basic OID conversion (this is simplified and may not work for all OIDs)
-  std::istringstream iss(oid);
-  std::string token;
+  // Ruční parsování OID bez stringstream
+  const char *ptr = oid.c_str();
   std::vector<int> oid_parts;
+  int current_value = 0;
   
-  while (std::getline(iss, token, '.')) {
-    if (!token.empty()) {
-      oid_parts.push_back(std::stoi(token));
+  while (*ptr) {
+    if (*ptr == '.') {
+      if (current_value >= 0) {
+        oid_parts.push_back(current_value);
+        current_value = 0;
+      }
+    } else if (*ptr >= '0' && *ptr <= '9') {
+      current_value = current_value * 10 + (*ptr - '0');
     }
+    ptr++;
+  }
+  
+  // Přidat poslední část
+  if (current_value >= 0) {
+    oid_parts.push_back(current_value);
   }
   
   if (oid_parts.size() >= 2) {
     // First two parts are encoded as 40 * X + Y
     result.push_back(40 * oid_parts[0] + oid_parts[1]);
     
-    // Remaining parts
+    // Remaining parts (zjednodušené - pouze pro malá čísla)
     for (size_t i = 2; i < oid_parts.size(); i++) {
       int value = oid_parts[i];
       if (value < 128) {
         result.push_back(value);
       } else {
-        // Multi-byte encoding needed (simplified)
-        while (value > 0) {
+        // Multi-byte encoding (zjednodušené)
+        if (value < 0x4000) {
+          result.push_back(0x80 | (value >> 7));
           result.push_back(value & 0x7F);
-          value >>= 7;
+        } else {
+          // Pro větší čísla by bylo potřeba více bytů
+          result.push_back(0x80 | (value >> 14));
+          result.push_back(0x80 | ((value >> 7) & 0x7F));
+          result.push_back(value & 0x7F);
         }
       }
     }
