@@ -21,7 +21,7 @@ void SnmpSensor::update() {
   // Lazy inicializace SNMP klienta – až při prvním update
   if (!snmp_inited) {
     ESP_LOGI(TAG, "Initializing SNMP client...");
-    snmp_client.begin();        // používá WiFiUDP::begin(...)
+    snmp_.begin(3001);        // používá WiFiUDP::begin(...)
     snmp_inited = true;
   }
 
