@@ -6,6 +6,11 @@ namespace snmp_sensor {
 
 static const char *TAG = "snmp_sensor";
 
+void SnmpSensor::on_wifi_ready() {
+  ESP_LOGI(TAG, "WiFi ready → starting SNMP client...");
+  snmp_client.begin(50000);  // SAFE port
+}
+
 void SnmpSensor::setup() {
   ESP_LOGI(TAG, "Initializing SNMP client...");
 
