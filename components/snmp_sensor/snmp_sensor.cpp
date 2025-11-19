@@ -5,6 +5,9 @@ namespace snmp {
 
 static const char *const TAG = "snmp";
 
+// Přidejte inicializaci do konstruktoru (pokud je v .cpp)
+// Nebo přesunout konstruktor do .cpp pokud je potřeba
+
 void SnmpSensor::setup() {
   if (udp_.begin(0)) {
     initialized_ = true;
@@ -49,6 +52,7 @@ void SnmpSensor::loop() {
   this->handle_response();
 }
 
+// Zbytek implementace zůstává stejný...
 void SnmpSensor::send_snmp_get() {
   IPAddress ip;
   if (!ip.fromString(this->host_.c_str())) {
@@ -119,7 +123,7 @@ void SnmpSensor::send_snmp_get() {
 void SnmpSensor::handle_response() {
   int packet_size = this->udp_.parsePacket();
   if (packet_size > 0) {
-    uint8_t buffer[256]; // Reduced buffer size
+    uint8_t buffer[256];
     int len = this->udp_.read(buffer, sizeof(buffer));
     
     if (len > 0) {
