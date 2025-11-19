@@ -16,15 +16,12 @@ class SnmpSensor : public sensor::Sensor, public PollingComponent {
   void setup() override;
   void update() override;
 
-  // ✔️ MUSÍ TU BÝT!
-  void on_wifi_ready() override;
-
  private:
   std::string host_;
   std::string community_;
   std::string oid_;
 
-  // SNMP client jako člen třídy
+  // SNMP klient jako člen třídy
   SnmpClient snmp_;
 };
 
