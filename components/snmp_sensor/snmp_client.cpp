@@ -29,21 +29,42 @@ bool SnmpClient::get(const char *host, const char *community, const char *oid, l
     return false;
   }
 
+  // --- DEBUG: DUMP ODESÍLANÉHO PAKETU ---
+  ESP_LOGI(TAG, "Sending SNMP GET packet (%d bytes):", len);
+  for (int i = 0; i < len; i++) {
+    ESP_LOGI(TAG, "%02X ", packet[i]);
+  }
+
+  // ODESLÁNÍ SNMP GET REQUEST
   udp_.beginPacket(ip, 161);
   udp_.write(packet, len);
   udp_.endPacket();
 
-  uint32_t deadline = millis() + 500;
+  // ČEKÁNÍ NA ODPOVĚĎ
+  uint32_t deadline = millis() + 800;  // prodlouženo na 800 ms
   while (millis() < deadline) {
     int size = udp_.parsePacket();
     if (size > 0) {
+
       uint8_t buffer[300];
       int n = udp_.read(buffer, sizeof(buffer));
+
+      // --- DEBUG: DUMP PŘIJATÉHO PAKETU ---
+      ESP_LOGI(TAG, "Received SNMP packet (%d bytes):", n);
+      for (int i = 0; i < n; i++) {
+        ESP_LOGI(TAG, "%02X ", buffer[i]);
+      }
+
       if (n > 0) {
         return parse_snmp_response(buffer, n, value);
       }
     }
   }
+
+  ESP_LOGW(TAG, "SNMP timeout for host %s oid %s", host, oid);
+  return false;
+}
+
 
   ESP_LOGW(TAG, "SNMP timeout for host %s oid %s", host, oid);
   return false;
