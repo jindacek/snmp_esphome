@@ -86,7 +86,7 @@ int SnmpClient::build_snmp_get_packet(uint8_t *b, int max,
   p += clen;
 
   // GET REQUEST PDU (0xA0)
-  b[p++] = 0xA0;
+  b[p++] = 0xA1;
   int pdu_len_pos = p++;
 
   // request-id: INTEGER 1
