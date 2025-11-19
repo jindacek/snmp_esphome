@@ -7,6 +7,8 @@
 namespace esphome {
 namespace snmp_sensor {
 
+extern SnmpClient global_snmp_client;
+
 class SnmpSensor : public sensor::Sensor, public PollingComponent {
  public:
   void set_host(const std::string &h) { host_ = h; }
@@ -20,9 +22,6 @@ class SnmpSensor : public sensor::Sensor, public PollingComponent {
   std::string host_;
   std::string community_;
   std::string oid_;
-
-  // SNMP klient jako člen třídy
-  SnmpClient snmp_;
 };
 
 }  // namespace snmp_sensor
