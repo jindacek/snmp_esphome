@@ -7,12 +7,12 @@ namespace snmp_sensor {
 
 static const char *TAG = "snmp_sensor";
 
-// Jeden globální SNMP klient pro všechny instance
+// Jeden globální SNMP klient
 static SnmpClient snmp_client;
 
 void SnmpSensor::setup() {
   ESP_LOGI(TAG, "Initializing SNMP client...");
-  snmp_.begin(3001);  // místo defaultu 161 použijeme 3001
+  snmp_client.begin(3001);   // vlastní port pro ESP klienta
 }
 
 void SnmpSensor::update() {
@@ -20,20 +20,7 @@ void SnmpSensor::update() {
            host_.c_str(), community_.c_str(), oid_.c_str());
 
   long value = 0;
-  if (snmp_.get(host_.c_str(), community_.c_str(), oid_.c_str(), &value)) {
-    ESP_LOGI(TAG, "SNMP OK: %ld", value);
-    this->publish_state((float) value);
-  } else {
-    ESP_LOGW(TAG, "SNMP GET FAILED for oid=%s", oid_.c_str());
-    this->publish_state(NAN);
-  }
-}
 
-
-  ESP_LOGD(TAG, "SNMP GET host=%s community=%s oid=%s",
-           host_.c_str(), community_.c_str(), oid_.c_str());
-
-  long value = 0;
   bool ok = snmp_client.get(
       host_.c_str(),
       community_.c_str(),
@@ -49,7 +36,6 @@ void SnmpSensor::update() {
   ESP_LOGI(TAG, "SNMP OK: %ld", value);
   this->publish_state((float) value);
 }
-
 
 }  // namespace snmp_sensor
 }  // namespace esphome
