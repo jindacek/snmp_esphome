@@ -1,18 +1,18 @@
 #include "snmp_sensor.h"
 #include "esphome/core/log.h"
-#include "snmp_client.h"
 
 namespace esphome {
 namespace snmp_sensor {
 
 static const char *TAG = "snmp_sensor";
 
-// Jeden globální SNMP klient
-static SnmpClient snmp_client;
-
 void SnmpSensor::setup() {
   ESP_LOGI(TAG, "Initializing SNMP client...");
-  snmp_client.begin(3001);   // vlastní port pro ESP klienta
+
+  // port musí být > 1024
+  if (!snmp_.begin(50000)) {
+    ESP_LOGE(TAG, "Failed to start SNMP UDP client");
+  }
 }
 
 void SnmpSensor::update() {
@@ -20,8 +20,7 @@ void SnmpSensor::update() {
            host_.c_str(), community_.c_str(), oid_.c_str());
 
   long value = 0;
-
-  bool ok = snmp_client.get(
+  bool ok = snmp_.get(
       host_.c_str(),
       community_.c_str(),
       oid_.c_str(),
@@ -34,7 +33,7 @@ void SnmpSensor::update() {
   }
 
   ESP_LOGI(TAG, "SNMP OK: %ld", value);
-  this->publish_state((float) value);
+  this->publish_state((float)value);
 }
 
 }  // namespace snmp_sensor
