@@ -132,52 +132,133 @@ int SnmpClient::build_snmp_get_packet(uint8_t *buf, int buf_size,
 // ------------------------ RESPONSE PARSER -----------------------------
 
 bool SnmpClient::parse_snmp_response(uint8_t *buf, int len, long *value) {
-  // Hledáme SEQUENCE (0x30) VarBindList
-  int i = 0;
+  if (len < 20) {
+    ESP_LOGW(TAG, "SNMP resp too short len=%d", len);
+    // radši hned fallback o kus níž
+  } else {
+    bool ok = false;
+    int i = 0;
 
-  // Najdeme první VarBind (0x30)
-  // Struktura SNMP: SEQUENCE → PDU → VarBindList → VarBind
-  while (i < len - 2 && buf[i] != 0x30) i++;
-  if (i >= len - 2) return false;
+    // Zkusíme STRIKTNÍ PARSER podle SNMPv1 struktury
+    do {
+      // 1) Outer SEQUENCE
+      if (buf[i++] != 0x30) break;
+      if (i >= len) break;
+      int len_total = buf[i++];  // ignorujeme, jen posouváme
 
-  // přeskoč délku SEQUENCE
-  i += 2;
+      // 2) version INTEGER
+      if (i + 2 > len) break;
+      if (buf[i++] != 0x02) break;
+      int l = buf[i++];
+      if (i + l > len) break;
+      i += l;
 
-  // Najdeme další SEQUENCE = VarBind
-  while (i < len - 2 && buf[i] != 0x30) i++;
-  if (i >= len - 2) return false;
+      // 3) community OCTET STRING
+      if (i + 2 > len) break;
+      if (buf[i++] != 0x04) break;
+      l = buf[i++];
+      if (i + l > len) break;
+      i += l;
 
-  // přeskoč VarBind head
-  int vb_len = buf[i+1];
-  int vb_start = i;
-  i += 2;
+      // 4) PDU (GetResponse = 0xA2, ale tolerujeme 0xA0–0xA5)
+      if (i + 2 > len) break;
+      uint8_t pdu_type = buf[i++];
+      if ((pdu_type & 0xA0) != 0xA0) break;
+      int pdu_len = buf[i++];  // jen posun
 
-  // --- OID ---
-  if (buf[i] != 0x06) return false;
-  int oid_len = buf[i+1];
-  i += 2 + oid_len;
+      // 5) request-id INTEGER
+      if (i + 2 > len) break;
+      if (buf[i++] != 0x02) break;
+      l = buf[i++];
+      if (i + l > len) break;
+      i += l;
 
-  // --- VALUE ---
-  uint8_t type = buf[i];
-  uint8_t vlen = buf[i+1];
-  uint8_t *data = &buf[i+2];
+      // 6) error-status INTEGER
+      if (i + 2 > len) break;
+      if (buf[i++] != 0x02) break;
+      l = buf[i++];
+      if (i + l > len) break;
+      i += l;
 
-  if (type == 0x05) {
-    // NULL
-    return false;
+      // 7) error-index INTEGER
+      if (i + 2 > len) break;
+      if (buf[i++] != 0x02) break;
+      l = buf[i++];
+      if (i + l > len) break;
+      i += l;
+
+      // 8) VarBindList SEQUENCE
+      if (i + 2 > len) break;
+      if (buf[i++] != 0x30) break;
+      int vbl_len = buf[i++];  // ignorujeme
+
+      // 9) VarBind SEQUENCE
+      if (i + 2 > len) break;
+      if (buf[i++] != 0x30) break;
+      int vb_len = buf[i++];  // ignorujeme
+
+      // 10) OID
+      if (i + 2 > len) break;
+      if (buf[i++] != 0x06) break;
+      int oid_len = buf[i++];
+      if (i + oid_len > len) break;
+      i += oid_len;
+
+      // 11) VALUE
+      if (i + 2 > len) break;
+      uint8_t type = buf[i++];
+      int vlen = buf[i++];
+
+      if (i + vlen > len) break;
+
+      if (type == 0x05) {
+        // NULL – hodnota neexistuje (třeba ten stav baterie)
+        ESP_LOGW(TAG, "SNMP value is NULL (ASN_NULL)");
+        return false;
+      }
+
+      if (!(type == 0x02 || type == 0x41 || type == 0x42)) {
+        ESP_LOGW(TAG, "Unsupported ASN.1 type 0x%02X", type);
+        break;
+      }
+
+      if (vlen <= 0 || vlen > 4) break;
+
+      long v = 0;
+      for (int j = 0; j < vlen; j++) {
+        v = (v << 8) | buf[i + j];
+      }
+      *value = v;
+      return true;
+
+    } while (false);
+
+    // když jsme se dostali sem, striktní parser selhal
+    ESP_LOGW(TAG, "Strict SNMP parse failed, falling back to simple scan");
   }
 
-  if (type == 0x02 || type == 0x41 || type == 0x42) {
-    long v = 0;
-    for (int j = 0; j < vlen; j++) {
-      v = (v << 8) | data[j];
+  // ---------- FALLBACK: původní jednoduchý scanner ----------
+  if (len < 2) return false;
+
+  for (int i = 0; i < len - 2; i++) {
+    uint8_t t = buf[i];
+    if (t == 0x02 || t == 0x41 || t == 0x42) {
+      int l = buf[i + 1];
+      if (l <= 0 || l > 4 || i + 2 + l > len) continue;
+
+      long v = 0;
+      for (int j = 0; j < l; j++) {
+        v = (v << 8) | buf[i + 2 + j];
+      }
+      *value = v;
+      return true;
     }
-    *value = v;
-    return true;
   }
 
+  ESP_LOGW(TAG, "No numeric ASN.1 value found in SNMP response");
   return false;
 }
+
 
 
 
