@@ -20,12 +20,12 @@ class SnmpSensor : public sensor::Sensor, public PollingComponent {
   void update() override;
   void loop() override;
 
-  // Přidejte chybějící virtuální metody ze sensor::Sensor
-  std::string unit_of_measurement() override { return unit_of_measurement_; }
+  // SPRÁVNÉ názvy metod ze sensor::Sensor
+  std::string get_unit_of_measurement() override { return unit_of_measurement_; }
   void set_unit_of_measurement(const std::string &unit) { unit_of_measurement_ = unit; }
   
-  int get_accuracy_decimals() override { return accuracy_decimals_; }
-  void set_accuracy_decimals(int decimals) { accuracy_decimals_ = decimals; }
+  int8_t get_accuracy_decimals() override { return accuracy_decimals_; }
+  void set_accuracy_decimals(int8_t decimals) { accuracy_decimals_ = decimals; }
   
   std::string get_state_class() override { return state_class_; }
   void set_state_class(const std::string &state_class) { state_class_ = state_class; }
@@ -41,7 +41,7 @@ class SnmpSensor : public sensor::Sensor, public PollingComponent {
   
   // Přidejte proměnné pro vlastnosti senzoru
   std::string unit_of_measurement_;
-  int accuracy_decimals_{0};
+  int8_t accuracy_decimals_{0};
   std::string state_class_;
   std::string device_class_;
   
