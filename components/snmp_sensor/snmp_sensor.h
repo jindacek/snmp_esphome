@@ -14,6 +14,8 @@ class SnmpSensor : public sensor::Sensor, public PollingComponent {
 
   void setup() override;
   void update() override;
+  void on_wifi_ready() override;
+
 
  private:
   std::string host_;
