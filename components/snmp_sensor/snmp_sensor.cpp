@@ -9,22 +9,11 @@ static const char *TAG = "snmp_sensor";
 void SnmpSensor::setup() {
   ESP_LOGI(TAG, "Initializing SNMP client...");
 
+  // Lokální port musí být >1024, protože 161 je blokovaný ESP-IDF
   if (!snmp_.begin(50000)) {
     ESP_LOGE(TAG, "Failed to start SNMP client on port 50000!");
   } else {
     ESP_LOGI(TAG, "SNMP client ready on local port 50000");
-  }
-}
-
-
-void SnmpSensor::on_wifi_ready() {
-  ESP_LOGI(TAG, "WiFi is ready – starting SNMP client...");
-
-  // Lokální port musí být >1024 (ESP-IDF blokuje 161)
-  if (!snmp_.begin(50000)) {
-    ESP_LOGE(TAG, "Failed to start SNMP UDP client on port 50000!");
-  } else {
-    ESP_LOGI(TAG, "SNMP client started on UDP port 50000");
   }
 }
 
