@@ -4,6 +4,8 @@
 namespace esphome {
 namespace snmp {
 
+static const char *const TAG = "snmp";
+
 void SNMPSensor::setup() {
   if (udp_.begin(0)) {
     initialized_ = true;
