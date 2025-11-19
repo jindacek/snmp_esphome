@@ -6,8 +6,8 @@ DEPENDENCIES = ['network']
 AUTO_LOAD = ['sensor']
 
 snmp_ns = cg.esphome_ns.namespace('snmp')
-# ZMĚNA: SnmpSensor místo SNMPSensor
-SnmpSensor = snmp_ns.class_('SnmpSensor', sensor.Sensor, cg.Component)
+# ZMĚNA: pouze sensor.Sensor (už obsahuje Component)
+SnmpSensor = snmp_ns.class_('SnmpSensor', sensor.Sensor)
 
 CONFIG_SCHEMA = sensor.SENSOR_SCHEMA.extend({
     cv.GenerateID(): cv.declare_id(SnmpSensor),
