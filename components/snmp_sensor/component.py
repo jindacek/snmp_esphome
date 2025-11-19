@@ -25,13 +25,3 @@ def to_code(config):
     cg.add(var.set_community(config["community"]))
     cg.add(var.set_oid(config["oid"]))
     cg.add(var.set_port(config["port"]))
-    
-    # Předání vlastností ze schématu senzoru
-    if "unit_of_measurement" in config:
-        cg.add(var.set_unit_of_measurement(config["unit_of_measurement"]))
-    if "accuracy_decimals" in config:
-        cg.add(var.set_accuracy_decimals(config["accuracy_decimals"]))
-    if "state_class" in config:
-        cg.add(var.set_state_class(config["state_class"]))
-    if "device_class" in config:
-        cg.add(var.set_device_class(config["device_class"]))
