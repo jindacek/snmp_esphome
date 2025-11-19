@@ -11,11 +11,20 @@ static const char *TAG = "snmp_sensor";
 static SnmpClient snmp_client;
 
 void SnmpSensor::setup() {
-  ESP_LOGI(TAG, "Initializing SNMP client...");
-  snmp_client.begin();  // lokální port 16100 (default)
+  ESP_LOGI(TAG, "SNMP sensor setup (lazy init)");
+  // ZDE UŽ NIC NEINICIALIZUJEME (žádné snmp_client.begin())
 }
 
 void SnmpSensor::update() {
+  static bool snmp_inited = false;
+
+  // Lazy inicializace SNMP klienta – až při prvním update
+  if (!snmp_inited) {
+    ESP_LOGI(TAG, "Initializing SNMP client...");
+    snmp_client.begin();        // používá WiFiUDP::begin(...)
+    snmp_inited = true;
+  }
+
   ESP_LOGD(TAG, "SNMP GET host=%s community=%s oid=%s",
            host_.c_str(), community_.c_str(), oid_.c_str());
 
@@ -35,6 +44,7 @@ void SnmpSensor::update() {
   ESP_LOGI(TAG, "SNMP OK: %ld", value);
   this->publish_state((float) value);
 }
+
 
 }  // namespace snmp_sensor
 }  // namespace esphome
