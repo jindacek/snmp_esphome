@@ -6,14 +6,61 @@ static const char *TAG = "snmp_client";
 
 SnmpClient::SnmpClient() {}
 
-bool SnmpClient::begin(uint16_t local_port) {
-  if (!udp_.begin(local_port)) {
-    ESP_LOGE(TAG, "UDP begin(%u) failed!", local_port);
+bool SnmpClient::get(const char *host,
+                     const char *community,
+                     const char *oid,
+                     long *value) {
+  IPAddress ip;
+  if (!ip.fromString(host)) {
+    ESP_LOGE(TAG, "Invalid host: %s", host);
     return false;
   }
-  ESP_LOGI(TAG, "UDP client started on port %u", local_port);
-  return true;
+
+  // Vytvoříme *lokální* UDP socket pro tenhle JEDEN požadavek
+  WiFiUDP udp;
+  if (!udp.begin(0)) {           // 0 = systém vybere volný port
+    ESP_LOGE(TAG, "UDP begin(0) failed");
+    return false;
+  }
+
+  uint8_t packet[300];
+  int plen = build_snmp_get_packet(packet, sizeof(packet), community, oid);
+  if (plen <= 0) {
+    ESP_LOGE(TAG, "SNMP packet build failed");
+    udp.stop();
+    return false;
+  }
+
+  // odešleme SNMP GET na port 161 UPSky
+  udp.beginPacket(ip, 161);
+  udp.write(packet, plen);
+  udp.endPacket();
+
+  uint32_t deadline = millis() + 1200;  // UPS je pomalá, dáme 1,2 s
+
+  while ((int32_t)(deadline - millis()) > 0) {
+    int size = udp.parsePacket();
+    if (size > 0) {
+      uint8_t resp[300];
+      int n = udp.read(resp, sizeof(resp));
+      if (n > 0) {
+        // použijeme TVŮJ existující parser
+        bool ok = parse_snmp_response(resp, n, value);
+        if (!ok) {
+          ESP_LOGW(TAG, "Failed to parse SNMP response");
+        }
+        udp.stop();
+        return ok;
+      }
+    }
+    delay(5);  // krátký yield, ať neshodíme watchdog
+  }
+
+  ESP_LOGW(TAG, "SNMP timeout for host %s oid %s", host, oid);
+  udp.stop();
+  return false;
 }
+
 
 // ------------------------ OID ENCODE -----------------------------
 
