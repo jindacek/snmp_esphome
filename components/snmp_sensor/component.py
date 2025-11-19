@@ -6,8 +6,7 @@ DEPENDENCIES = ['network']
 AUTO_LOAD = ['sensor']
 
 snmp_ns = cg.esphome_ns.namespace('snmp')
-# ZMĚNA: pouze sensor.Sensor (už obsahuje Component)
-SnmpSensor = snmp_ns.class_('SnmpSensor', sensor.Sensor)
+SnmpSensor = snmp_ns.class_('SnmpSensor', sensor.Sensor, cg.PollingComponent)
 
 CONFIG_SCHEMA = sensor.SENSOR_SCHEMA.extend({
     cv.GenerateID(): cv.declare_id(SnmpSensor),
@@ -15,7 +14,7 @@ CONFIG_SCHEMA = sensor.SENSOR_SCHEMA.extend({
     cv.Required("community"): cv.string,
     cv.Required("oid"): cv.string,
     cv.Optional("port", default=161): cv.port,
-}).extend(cv.COMPONENT_SCHEMA)
+}).extend(cv.polling_component_schema('60s'))
 
 def to_code(config):
     var = cg.new_Pvariable(config["id"])
