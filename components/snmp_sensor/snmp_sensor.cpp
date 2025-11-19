@@ -1,12 +1,12 @@
 #include "snmp_sensor.h"
-#include <WiFiUdp.h>
 
 namespace esphome {
 namespace snmp {
 
 static const char *const TAG = "snmp";
 
-void SNMPSensor::setup() {
+// ZMĚNA: Všechny metody teď patří do SnmpSensor místo SNMPSensor
+void SnmpSensor::setup() {
   if (udp_.begin(0)) {
     initialized_ = true;
     ESP_LOGI(TAG, "SNMP sensor initialized for OID: %s", this->oid_.c_str());
@@ -15,7 +15,7 @@ void SNMPSensor::setup() {
   }
 }
 
-void SNMPSensor::update() {
+void SnmpSensor::update() {
   if (!initialized_ || waiting_response_) {
     return;
   }
@@ -23,7 +23,7 @@ void SNMPSensor::update() {
   this->send_snmp_get();
 }
 
-void SNMPSensor::loop() {
+void SnmpSensor::loop() {
   if (!initialized_ || !waiting_response_) {
     return;
   }
@@ -39,7 +39,7 @@ void SNMPSensor::loop() {
   this->handle_response();
 }
 
-void SNMPSensor::send_snmp_get() {
+void SnmpSensor::send_snmp_get() {
   IPAddress ip;
   if (!ip.fromString(this->host_.c_str())) {
     ESP_LOGE(TAG, "Invalid IP address: %s", this->host_.c_str());
@@ -100,7 +100,7 @@ void SNMPSensor::send_snmp_get() {
   }
 }
 
-void SNMPSensor::handle_response() {
+void SnmpSensor::handle_response() {
   int packet_size = this->udp_.parsePacket();
   if (packet_size) {
     uint8_t buffer[512];
@@ -119,7 +119,7 @@ void SNMPSensor::handle_response() {
   }
 }
 
-std::string SNMPSensor::oid_to_bytes(const std::string &oid) {
+std::string SnmpSensor::oid_to_bytes(const std::string &oid) {
   // Simplified OID conversion for common APC OIDs
   if (oid == "1.3.6.1.4.1.318.1.1.1.3.2.1.0") {
     // Battery Voltage
@@ -148,7 +148,7 @@ std::string SNMPSensor::oid_to_bytes(const std::string &oid) {
   return std::string(result.begin(), result.end());
 }
 
-float SNMPSensor::parse_snmp_response(const uint8_t *buffer, size_t length) {
+float SnmpSensor::parse_snmp_response(const uint8_t *buffer, size_t length) {
   // Simplified parser - looks for INTEGER values
   for (size_t i = 0; i < length - 2; i++) {
     if (buffer[i] == 0x02) { // INTEGER type
