@@ -19,10 +19,6 @@ class SnmpSensor : public sensor::Sensor, public PollingComponent {
   void update() override;
   void loop() override;
 
-  // NEPŘEPISUJEME metody - necháme základní třídu, ať se postará
-  // ESPHome automaticky zpracuje unit_of_measurement, accuracy_decimals, etc.
-  // z YAML konfigurace
-
  protected:
   std::string host_;
   std::string community_;
