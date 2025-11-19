@@ -1,4 +1,5 @@
 #pragma once
+
 #include "esphome/core/component.h"
 #include "esphome/components/sensor/sensor.h"
 #include "snmp_client.h"
@@ -15,13 +16,16 @@ class SnmpSensor : public sensor::Sensor, public PollingComponent {
   void setup() override;
   void update() override;
 
+  // ✔️ MUSÍ TU BÝT!
+  void on_wifi_ready() override;
+
  private:
   std::string host_;
   std::string community_;
   std::string oid_;
 
+  // SNMP client jako člen třídy
   SnmpClient snmp_;
-  bool snmp_initialized_ = false;
 };
 
 }  // namespace snmp_sensor
