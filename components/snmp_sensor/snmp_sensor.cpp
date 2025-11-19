@@ -6,24 +6,28 @@ namespace snmp_sensor {
 
 static const char *TAG = "snmp_sensor";
 
-void SnmpSensor::setup() {
-  ESP_LOGI(TAG, "Initializing SNMP client...");
+SnmpClient global_snmp_client;
 
-  // použití portu 50000, 161 necháme UPSce
-  if (!snmp_.begin(50000)) {
-    ESP_LOGE(TAG, "Failed to start SNMP client on port 50000!");
-  } else {
-    ESP_LOGI(TAG, "SNMP client ready on local port 50000");
+void SnmpSensor::setup() {
+  static bool started = false;
+
+  if (!started) {
+    ESP_LOGI(TAG, "Starting global SNMP client on port 50000...");
+    if (!global_snmp_client.begin(50000)) {
+      ESP_LOGE(TAG, "Failed to start global SNMP client!");
+    } else {
+      ESP_LOGI(TAG, "Global SNMP client READY");
+    }
+    started = true;
   }
 }
 
 void SnmpSensor::update() {
-  ESP_LOGD(TAG, "SNMP GET host=%s community=%s oid=%s",
-           host_.c_str(), community_.c_str(), oid_.c_str());
-
   long value = 0;
 
-  bool ok = snmp_.get(
+  ESP_LOGD(TAG, "SNMP GET host=%s oid=%s", host_.c_str(), oid_.c_str());
+
+  bool ok = global_snmp_client.get(
       host_.c_str(),
       community_.c_str(),
       oid_.c_str(),
@@ -31,12 +35,12 @@ void SnmpSensor::update() {
 
   if (!ok) {
     ESP_LOGW(TAG, "SNMP GET FAILED for oid=%s", oid_.c_str());
-    this->publish_state(NAN);
+    publish_state(NAN);
     return;
   }
 
   ESP_LOGI(TAG, "SNMP OK: %ld", value);
-  this->publish_state((float) value);
+  publish_state((float)value);
 }
 
 }  // namespace snmp_sensor
