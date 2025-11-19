@@ -1,0 +1,18 @@
+{
+  "name": "SNMP Sensor for ESPHome",
+  "version": "1.0.0",
+  "keywords": "esphome, snmp, sensor, ups, apc",
+  "description": "SNMP sensor component for ESPHome to monitor UPS devices",
+  "repository": {
+    "type": "git", 
+    "url": "https://github.com/jindacek/snmp_esphome"
+  },
+  "authors": [
+    {
+      "name": "jindacek",
+      "url": "https://github.com/jindacek"
+    }
+  ],
+  "frameworks": "arduino",
+  "platforms": "espressif32"
+}
