@@ -6,7 +6,8 @@
 namespace esphome {
 namespace snmp {
 
-class SNMPSensor : public sensor::Sensor, public Component {
+// ZMĚNA: SnmpSensor místo SNMPSensor
+class SnmpSensor : public sensor::Sensor, public Component {
  public:
   void set_host(const std::string &host) { host_ = host; }
   void set_community(const std::string &community) { community_ = community; }
