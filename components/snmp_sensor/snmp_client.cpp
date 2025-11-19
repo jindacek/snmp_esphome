@@ -134,16 +134,21 @@ int SnmpClient::build_snmp_get_packet(uint8_t *buf, int buf_size,
 bool SnmpClient::parse_snmp_response(uint8_t *buf, int len, long *value) {
   if (len < 2) return false;
 
-  // Hodně jednoduchý parser: hledá první INTEGER (0x02) nebo GAUGE/UNSIGNED (0x41/0x42)
-  for (int i = 0; i < len - 2; i++) {
+  // Projdeme buffer od KONCE – hledáme poslední INTEGER / GAUGE / UNSIGNED
+  for (int i = len - 2; i >= 0; i--) {
     uint8_t t = buf[i];
+
+    // INTEGER (0x02), GAUGE32 (0x41), UNSIGNED32 (0x42)
     if (t == 0x02 || t == 0x41 || t == 0x42) {
-      int l = buf[i+1];
+      if (i + 1 >= len) continue;
+      int l = buf[i + 1];
       if (l <= 0 || l > 4 || i + 2 + l > len) continue;
+
       long v = 0;
       for (int j = 0; j < l; j++) {
-        v = (v << 8) | buf[i+2+j];
+        v = (v << 8) | buf[i + 2 + j];
       }
+
       *value = v;
       return true;
     }
@@ -152,6 +157,7 @@ bool SnmpClient::parse_snmp_response(uint8_t *buf, int len, long *value) {
   ESP_LOGW(TAG, "No numeric ASN.1 value found in SNMP response");
   return false;
 }
+
 
 // ------------------------ PUBLIC GET -----------------------------
 
