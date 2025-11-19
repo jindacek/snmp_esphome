@@ -1,28 +1,41 @@
 #pragma once
 
-#include "esphome/core/component.h"
-#include "esphome/components/sensor/sensor.h"
+#include "esphome.h"
+#include <WiFiUdp.h>
 
 namespace esphome {
-namespace snmp_sensor {
+namespace snmp {
 
-class SnmpSensor : public PollingComponent, public sensor::Sensor {
+class SNMPSensor : public sensor::Sensor, public Component {
  public:
-  // Konstruktor musí přijmout interval – ESPHome to vyžaduje
-  SnmpSensor() : PollingComponent(2000) {}   // default 2000 ms
-
-  void setup() override;
-  void update() override;
-
   void set_host(const std::string &host) { host_ = host; }
   void set_community(const std::string &community) { community_ = community; }
   void set_oid(const std::string &oid) { oid_ = oid; }
+  void set_port(uint16_t port) { port_ = port; }
+
+  void setup() override;
+  void update() override;
+  void loop() override;
+  
+  float get_setup_priority() const override { return setup_priority::AFTER_WIFI; }
 
  protected:
   std::string host_;
   std::string community_;
   std::string oid_;
+  uint16_t port_{161};
+  
+  WiFiUDP udp_;
+  bool initialized_{false};
+  bool waiting_response_{false};
+  unsigned long send_time_{0};
+  const unsigned long timeout_{5000};
+  
+  void send_snmp_get();
+  void handle_response();
+  std::string oid_to_bytes(const std::string &oid);
+  float parse_snmp_response(const uint8_t *buffer, size_t length);
 };
 
-}  // namespace snmp_sensor
+}  // namespace snmp
 }  // namespace esphome
