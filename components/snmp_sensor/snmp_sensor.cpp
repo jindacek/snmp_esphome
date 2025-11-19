@@ -7,39 +7,29 @@ namespace snmp_sensor {
 static const char *TAG = "snmp_sensor";
 
 void SnmpSensor::setup() {
-  ESP_LOGI(TAG, "Initializing SNMP client...");
+  ESP_LOGI(TAG, "SNMP sensor setup – waiting for WiFi...");
+  // NESMÍME zde volat snmp_.begin(), jinak přijde crash
+}
 
-  // Každý senzor dostane vlastní port podle hash OID → žádné kolize
+void SnmpSensor::on_wifi_ready() {
+  ESP_LOGI(TAG, "WiFi ready – starting SNMP client");
+
+  // Každý senzor → vlastní port podle OID hash
   uint16_t port = 40000 + (uint16_t)(std::hash<std::string>{}(oid_) % 20000);
 
   if (!snmp_.begin(port)) {
     ESP_LOGE(TAG, "Failed to start SNMP client on port %u!", port);
   } else {
-    ESP_LOGI(TAG, "SNMP client ready on local port %u", port);
+    ESP_LOGI(TAG, "SNMP client started on local UDP port %u", port);
   }
 }
 
-
 void SnmpSensor::update() {
-
-  // ---- Lazy init – první update po WiFi ----
-  if (!snmp_initialized_) {
-    ESP_LOGI(TAG, "Initializing SNMP client on port 50000...");
-
-    if (!snmp_.begin(50000)) {
-      ESP_LOGE(TAG, "Failed to init SNMP on port 50000");
-      return;
-    }
-
-    snmp_initialized_ = true;
-    ESP_LOGI(TAG, "SNMP client ready.");
-  }
-
-  // ---- SNMP GET ----
   ESP_LOGD(TAG, "SNMP GET host=%s community=%s oid=%s",
            host_.c_str(), community_.c_str(), oid_.c_str());
 
   long value = 0;
+
   bool ok = snmp_.get(
       host_.c_str(),
       community_.c_str(),
