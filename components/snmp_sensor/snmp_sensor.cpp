@@ -11,8 +11,8 @@ static const char *TAG = "snmp_sensor";
 static SnmpClient snmp_client;
 
 void SnmpSensor::setup() {
-  ESP_LOGI(TAG, "SNMP sensor setup (lazy init)");
-  // ZDE UŽ NIC NEINICIALIZUJEME (žádné snmp_client.begin())
+  ESP_LOGI(TAG, "Initializing SNMP client...");
+  snmp_.begin(3001);  // místo defaultu 161 použijeme 3001
 }
 
 void SnmpSensor::update() {
