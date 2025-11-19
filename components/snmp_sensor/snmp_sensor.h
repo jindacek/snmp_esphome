@@ -6,7 +6,7 @@
 namespace esphome {
 namespace snmp {
 
-class SnmpSensor : public sensor::Sensor {  // ZMĚNA: pouze sensor::Sensor
+class SnmpSensor : public sensor::Sensor, public PollingComponent {
  public:
   void set_host(const std::string &host) { host_ = host; }
   void set_community(const std::string &community) { community_ = community; }
@@ -16,9 +16,6 @@ class SnmpSensor : public sensor::Sensor {  // ZMĚNA: pouze sensor::Sensor
   void setup() override;
   void update() override;
   void loop() override;
-  
-  // ZMĚNA: Přesunuto z Component do Sensor
-  float get_setup_priority() const override { return setup_priority::AFTER_WIFI; }
 
  protected:
   std::string host_;
