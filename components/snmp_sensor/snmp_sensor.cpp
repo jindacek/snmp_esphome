@@ -6,6 +6,24 @@ namespace snmp_sensor {
 
 static const char *TAG = "snmp_sensor";
 
+// Convert APC date formats to DD-MM-YYYY
+static std::string convert_apc_date(const std::string &raw) {
+  if (raw.size() < 8) return raw;
+
+  int mm = 0, dd = 0, yy = 0;
+  sscanf(raw.c_str(), "%d/%d/%d", &mm, &dd, &yy);
+
+  if (yy < 100) {
+    if (yy <= 80) yy += 2000;
+    else yy += 1900;
+  }
+
+  char out[16];
+  snprintf(out, sizeof(out), "%02d-%02d-%04d", dd, mm, yy);
+  return std::string(out);
+}
+
+
 void SnmpSensor::setup() {
   ESP_LOGI(TAG, "snmp_sensor setup");
 }
@@ -117,9 +135,16 @@ void SnmpSensor::update() {
 
   ESP_LOGI(TAG, "  Model: %s", values_str[0].empty() ? "<none>" : values_str[0].c_str());
   ESP_LOGI(TAG, "  Name: %s", values_str[1].empty() ? "<none>" : values_str[1].c_str());
-  ESP_LOGI(TAG, "  Manufacture Date: %s", values_str[2].empty() ? "<none>" : values_str[2].c_str());
-  ESP_LOGI(TAG, "  Last Battery Replacement: %s", values_str[3].empty() ? "<none>" : values_str[3].c_str());
-  ESP_LOGI(TAG, "  Last Start Time: %s", values_str[4].empty() ? "<none>" : values_str[4].c_str());
+
+  ESP_LOGI(TAG, "  Manufacture Date: %s",
+           values_str[2].empty() ? "<none>" : convert_apc_date(values_str[2]).c_str());
+
+  ESP_LOGI(TAG, "  Last Battery Replacement: %s",
+           values_str[3].empty() ? "<none>" : convert_apc_date(values_str[3]).c_str());
+
+  ESP_LOGI(TAG, "  Last Start Time: %s",
+           values_str[4].empty() ? "<none>" : convert_apc_date(values_str[4]).c_str());
+
 }
 
 }  // namespace snmp_sensor
