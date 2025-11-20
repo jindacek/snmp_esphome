@@ -31,6 +31,8 @@ void SnmpSensor::update() {
   }
 
   // Dump všech hodnot
+  // 🔥 TADY JE NAŠICH 13 OID!
+static const char *UPS_OIDS[13] = {  
   ESP_LOGI(TAG, "MULTI-GET OK:");
   ESP_LOGI(TAG, "  Runtime: %ld ticks = %.1f s", values[0], values[0] / 100.0f);
   ESP_LOGI(TAG, "  Battery Cap: %ld %%", values[1]);
@@ -45,7 +47,7 @@ void SnmpSensor::update() {
   ESP_LOGI(TAG, "  Manufacture Date: %ld", values[10]);
   ESP_LOGI(TAG, "  Last Battery Replacement: %ld", values[11]);
   ESP_LOGI(TAG, "  Last Start Time: %ld", values[12]);
-}
+};
 
 
 
