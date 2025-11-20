@@ -49,7 +49,7 @@ void SnmpSensor::update() {
       host_.c_str(),
       community_.c_str(),
       oids,
-      2,
+      13,
       values
   );
 
