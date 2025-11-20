@@ -212,48 +212,75 @@ bool SnmpClient::get(const char *host,
 bool SnmpClient::get_many(const char *host,
                           const char *community,
                           const char **oids,
-                          int num_oids,
-                          long *values) {
+                          int count,
+                          long *values)
+{
+  // Reset output values
+  for (int i = 0; i < count; i++) values[i] = -1;
+
   IPAddress ip;
-  if (!ip.fromString(host)) {
-    ESP_LOGE(TAG, "Invalid host: %s", host);
-    return false;
-  }
+  if (!ip.fromString(host)) return false;
 
-  uint8_t packet[300];
-  int plen = build_snmp_get_packet_multi(packet, sizeof(packet), community, oids, num_oids);
-  if (plen <= 0) {
-    ESP_LOGE(TAG, "SNMP packet build failed");
-    return false;
-  }
+  // --- Build REQUEST ---
+  uint8_t packet[512];
+  int plen = build_snmp_get_packet_multi(packet, sizeof(packet), community, oids, count);
+  if (plen <= 0) return false;
 
-  udp_.beginPacket(ip, 161);   // server port UPS
+  udp_.beginPacket(ip, 161);
   udp_.write(packet, plen);
   udp_.endPacket();
 
   uint32_t deadline = millis() + 500;
+  uint8_t resp[512];
 
   while (millis() < deadline) {
     int size = udp_.parsePacket();
-    if (size > 0) {
-      uint8_t resp[300];
-      int n = udp_.read(resp, sizeof(resp));
-      ESP_LOGI("snmp_dump", "--- SNMP RAW RESPONSE (%d bytes) ---", n);
-      for (int i = 0; i < n; i++) {
-        if (i % 16 == 0) ESP_LOGI("snmp_dump", "");
-        ESP_LOGI("snmp_dump", "%02X ", resp[i]);
-      }
-      ESP_LOGI("snmp_dump", "\n--- END RAW ---");
-      if (n > 0) {
-        bool ok = parse_snmp_response_multi(resp, n, values, num_oids);
-        if (!ok) {
-          ESP_LOGW(TAG, "Failed to parse SNMP multi-response");
+    if (!size) continue;
+
+    int n = udp_.read(resp, sizeof(resp));
+    if (n <= 0) continue;
+
+    // --- MULTI PARSER ---
+    int pos = 0;
+    while (pos < n - 4) {
+
+      // Hledáme OID tag (0x06)
+      if (resp[pos] == 0x06) {
+        int oid_len = resp[pos+1];
+        const uint8_t *oid_ptr = &resp[pos+2];
+
+        // VALUE TLV začíná hned za OID
+        int val_tlv = pos + 2 + oid_len;
+        uint8_t vtag = resp[val_tlv];
+        uint8_t vlen = resp[val_tlv + 1];
+
+        long val = 0;
+
+        // Jen pro numeric ASN.1 types
+        if (vtag == 0x02 || vtag == 0x41 || vtag == 0x42) {
+          for (int j = 0; j < vlen; j++)
+            val = (val << 8) | resp[val_tlv + 2 + j];
         }
-        return ok;
+
+        // Porovnání OID se seznamem
+        for (int i = 0; i < count; i++) {
+          uint8_t expected[64];
+          int elen = encode_oid(oids[i], expected, sizeof(expected));
+
+          if (elen == oid_len &&
+              memcmp(expected, oid_ptr, oid_len) == 0)
+          {
+            values[i] = val;
+          }
+        }
       }
+
+      pos++;
     }
+
+    return true;
   }
 
-  ESP_LOGW(TAG, "SNMP timeout for host %s (multi OID)", host);
   return false;
 }
+
