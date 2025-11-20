@@ -59,19 +59,22 @@ static int encode_oid(const char *oid_str, uint8_t *out, int max_len) {
   return p;
 }
 
-// ------------------------ SNMPv1 GET PDU -----------------------------
+// ------------------------ SNMPv1 GET PDU – single OID -----------------------------
 
 int SnmpClient::build_snmp_get_packet(uint8_t *buf, int buf_size,
                                       const char *community,
                                       const char *oid_str) {
-  if (buf_size < 64) return -1;
+  const char *oids[1] = {oid_str};
+  return build_snmp_get_packet_multi(buf, buf_size, community, oids, 1);
+}
 
-  uint8_t oid[64];
-  int oid_len = encode_oid(oid_str, oid, sizeof(oid));
-  if (oid_len <= 0) {
-    ESP_LOGE(TAG, "encode_oid failed for %s", oid_str);
-    return -1;
-  }
+// ------------------------ SNMPv1 GET PDU – multi OID -----------------------------
+
+int SnmpClient::build_snmp_get_packet_multi(uint8_t *buf, int buf_size,
+                                            const char *community,
+                                            const char **oids,
+                                            int num_oids) {
+  if (buf_size < 64 || num_oids <= 0) return -1;
 
   uint8_t *p = buf;
 
@@ -84,6 +87,7 @@ int SnmpClient::build_snmp_get_packet(uint8_t *buf, int buf_size,
 
   // community
   size_t clen = strlen(community);
+  if (clen > 60) return -1;  // hrubý limit
   *p++ = 0x04;
   *p++ = (uint8_t)clen;
   memcpy(p, community, clen);
@@ -106,22 +110,34 @@ int SnmpClient::build_snmp_get_packet(uint8_t *buf, int buf_size,
   *p++ = 0x30;
   uint8_t *len_vbl = p++;
 
-  // VarBind
-  *p++ = 0x30;
-  uint8_t *len_vb = p++;
+  uint8_t *vbl_start = p;
+  (void)vbl_start;  // nepoužito, ale necháme to tu
 
-  // OID
-  *p++ = 0x06;
-  *p++ = (uint8_t) oid_len;
-  memcpy(p, oid, oid_len);
-  p += oid_len;
+  for (int idx = 0; idx < num_oids; idx++) {
+    uint8_t oid[64];
+    int oid_len = encode_oid(oids[idx], oid, sizeof(oid));
+    if (oid_len <= 0) {
+      ESP_LOGE(TAG, "encode_oid failed for %s", oids[idx]);
+      return -1;
+    }
 
-  // value = NULL
-  *p++ = 0x05;
-  *p++ = 0x00;
+    // VarBind
+    *p++ = 0x30;
+    uint8_t *len_vb = p++;
 
-  // Prepočty délek
-  *len_vb    = (uint8_t)(p - (len_vb + 1));
+    // OID
+    *p++ = 0x06;
+    *p++ = (uint8_t) oid_len;
+    memcpy(p, oid, oid_len);
+    p += oid_len;
+
+    // value = NULL
+    *p++ = 0x05;
+    *p++ = 0x00;
+
+    *len_vb = (uint8_t)(p - (len_vb + 1));
+  }
+
   *len_vbl   = (uint8_t)(p - (len_vbl + 1));
   *len_pdu   = (uint8_t)(p - (len_pdu + 1));
   *len_total = (uint8_t)(p - (len_total + 1));
@@ -129,120 +145,29 @@ int SnmpClient::build_snmp_get_packet(uint8_t *buf, int buf_size,
   return (int)(p - buf);
 }
 
-// ------------------------ RESPONSE PARSER -----------------------------
+// ------------------------ RESPONSE PARSER – single -----------------------------
 
 bool SnmpClient::parse_snmp_response(uint8_t *buf, int len, long *value) {
-  if (len < 20) {
-    ESP_LOGW(TAG, "SNMP resp too short len=%d", len);
-    // radši hned fallback o kus níž
-  } else {
-    bool ok = false;
-    int i = 0;
+  long tmp[1];
+  bool ok = parse_snmp_response_multi(buf, len, tmp, 1);
+  if (!ok) return false;
+  *value = tmp[0];
+  return true;
+}
 
-    // Zkusíme STRIKTNÍ PARSER podle SNMPv1 struktury
-    do {
-      // 1) Outer SEQUENCE
-      if (buf[i++] != 0x30) break;
-      if (i >= len) break;
-      int len_total = buf[i++];  // ignorujeme, jen posouváme
+// ------------------------ RESPONSE PARSER – multi -----------------------------
 
-      // 2) version INTEGER
-      if (i + 2 > len) break;
-      if (buf[i++] != 0x02) break;
-      int l = buf[i++];
-      if (i + l > len) break;
-      i += l;
+bool SnmpClient::parse_snmp_response_multi(uint8_t *buf, int len,
+                                           long *values,
+                                           int num_oids) {
+  if (len < 2 || num_oids <= 0) return false;
 
-      // 3) community OCTET STRING
-      if (i + 2 > len) break;
-      if (buf[i++] != 0x04) break;
-      l = buf[i++];
-      if (i + l > len) break;
-      i += l;
+  int found = 0;
 
-      // 4) PDU (GetResponse = 0xA2, ale tolerujeme 0xA0–0xA5)
-      if (i + 2 > len) break;
-      uint8_t pdu_type = buf[i++];
-      if ((pdu_type & 0xA0) != 0xA0) break;
-      int pdu_len = buf[i++];  // jen posun
-
-      // 5) request-id INTEGER
-      if (i + 2 > len) break;
-      if (buf[i++] != 0x02) break;
-      l = buf[i++];
-      if (i + l > len) break;
-      i += l;
-
-      // 6) error-status INTEGER
-      if (i + 2 > len) break;
-      if (buf[i++] != 0x02) break;
-      l = buf[i++];
-      if (i + l > len) break;
-      i += l;
-
-      // 7) error-index INTEGER
-      if (i + 2 > len) break;
-      if (buf[i++] != 0x02) break;
-      l = buf[i++];
-      if (i + l > len) break;
-      i += l;
-
-      // 8) VarBindList SEQUENCE
-      if (i + 2 > len) break;
-      if (buf[i++] != 0x30) break;
-      int vbl_len = buf[i++];  // ignorujeme
-
-      // 9) VarBind SEQUENCE
-      if (i + 2 > len) break;
-      if (buf[i++] != 0x30) break;
-      int vb_len = buf[i++];  // ignorujeme
-
-      // 10) OID
-      if (i + 2 > len) break;
-      if (buf[i++] != 0x06) break;
-      int oid_len = buf[i++];
-      if (i + oid_len > len) break;
-      i += oid_len;
-
-      // 11) VALUE
-      if (i + 2 > len) break;
-      uint8_t type = buf[i++];
-      int vlen = buf[i++];
-
-      if (i + vlen > len) break;
-
-      if (type == 0x05) {
-        // NULL – hodnota neexistuje (třeba ten stav baterie)
-        ESP_LOGW(TAG, "SNMP value is NULL (ASN_NULL)");
-        return false;
-      }
-
-      if (!(type == 0x02 || type == 0x41 || type == 0x42)) {
-        ESP_LOGW(TAG, "Unsupported ASN.1 type 0x%02X", type);
-        break;
-      }
-
-      if (vlen <= 0 || vlen > 4) break;
-
-      long v = 0;
-      for (int j = 0; j < vlen; j++) {
-        v = (v << 8) | buf[i + j];
-      }
-      *value = v;
-      return true;
-
-    } while (false);
-
-    // když jsme se dostali sem, striktní parser selhal
-    ESP_LOGW(TAG, "Strict SNMP parse failed, falling back to simple scan");
-  }
-
-  // ---------- FALLBACK: původní jednoduchý scanner ----------
-  if (len < 2) return false;
-
-  for (int i = 0; i < len - 2; i++) {
+  // Jdeme odzadu – tím přeskočíme hlavičky (version, request-id, atd.)
+  for (int i = len - 2; i >= 0 && found < num_oids; --i) {
     uint8_t t = buf[i];
-    if (t == 0x02 || t == 0x41 || t == 0x42) {
+    if (t == 0x02 || t == 0x41 || t == 0x42) {  // INTEGER, GAUGE, UNSIGNED
       int l = buf[i + 1];
       if (l <= 0 || l > 4 || i + 2 + l > len) continue;
 
@@ -250,24 +175,45 @@ bool SnmpClient::parse_snmp_response(uint8_t *buf, int len, long *value) {
       for (int j = 0; j < l; j++) {
         v = (v << 8) | buf[i + 2 + j];
       }
-      *value = v;
-      return true;
+
+      // Plníme od konce → poslední nalezená hodnota = poslední OID
+      int idx = num_oids - 1 - found;
+      values[idx] = v;
+      found++;
     }
   }
 
-  ESP_LOGW(TAG, "No numeric ASN.1 value found in SNMP response");
-  return false;
+  if (found != num_oids) {
+    ESP_LOGW(TAG, "Multi-parse: expected %d values, found %d",
+             num_oids, found);
+    return false;
+  }
+
+  return true;
 }
 
-
-
-
-// ------------------------ PUBLIC GET -----------------------------
+// ------------------------ PUBLIC GET – single OID -----------------------------
 
 bool SnmpClient::get(const char *host,
                      const char *community,
                      const char *oid,
                      long *value) {
+  const char *oids[1] = {oid};
+  long vals[1] = {0};
+
+  bool ok = get_many(host, community, oids, 1, vals);
+  if (!ok) return false;
+  *value = vals[0];
+  return true;
+}
+
+// ------------------------ PUBLIC GET – multi OID -----------------------------
+
+bool SnmpClient::get_many(const char *host,
+                          const char *community,
+                          const char **oids,
+                          int num_oids,
+                          long *values) {
   IPAddress ip;
   if (!ip.fromString(host)) {
     ESP_LOGE(TAG, "Invalid host: %s", host);
@@ -275,7 +221,7 @@ bool SnmpClient::get(const char *host,
   }
 
   uint8_t packet[300];
-  int plen = build_snmp_get_packet(packet, sizeof(packet), community, oid);
+  int plen = build_snmp_get_packet_multi(packet, sizeof(packet), community, oids, num_oids);
   if (plen <= 0) {
     ESP_LOGE(TAG, "SNMP packet build failed");
     return false;
@@ -293,15 +239,15 @@ bool SnmpClient::get(const char *host,
       uint8_t resp[300];
       int n = udp_.read(resp, sizeof(resp));
       if (n > 0) {
-        bool ok = parse_snmp_response(resp, n, value);
+        bool ok = parse_snmp_response_multi(resp, n, values, num_oids);
         if (!ok) {
-          ESP_LOGW(TAG, "Failed to parse SNMP response");
+          ESP_LOGW(TAG, "Failed to parse SNMP multi-response");
         }
         return ok;
       }
     }
   }
 
-  ESP_LOGW(TAG, "SNMP timeout for host %s oid %s", host, oid);
+  ESP_LOGW(TAG, "SNMP timeout for host %s (multi OID)", host);
   return false;
 }
