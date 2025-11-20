@@ -7,14 +7,9 @@ namespace snmp_sensor {
 static const char *TAG = "snmp_sensor";
 
 void SnmpSensor::setup() {
-  ESP_LOGI(TAG, "Initializing SNMP client on port 50000...");
-
-  if (!snmp_.begin(50000)) {
-    ESP_LOGE(TAG, "Failed to start SNMP client on port 50000!");
-  } else {
-    ESP_LOGI(TAG, "SNMP client ready.");
-  }
+  ESP_LOGI(TAG, "snmp_sensor setup");
 }
+
 
 void SnmpSensor::update() {
   // 🔥 PROTOTYP: jeden multi-OID dotaz se dvěma OID
