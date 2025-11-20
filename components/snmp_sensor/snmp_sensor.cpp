@@ -40,7 +40,7 @@ void SnmpSensor::update() {
     "1.3.6.1.4.1.318.1.1.1.2.1.3.0",  // 11 Last battery replacement
     "1.3.6.1.4.1.318.1.1.1.7.2.4.0"   // 12 Last start time
   };
-  long values[2] = {0, 0};
+  long values[13] = {0};
 
   ESP_LOGD(TAG, "SNMP MULTI-GET host=%s community=%s",
            host_.c_str(), community_.c_str());
@@ -49,7 +49,7 @@ void SnmpSensor::update() {
       host_.c_str(),
       community_.c_str(),
       oids,
-      2,
+      13,
       values
   );
 
