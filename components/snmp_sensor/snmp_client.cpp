@@ -135,26 +135,53 @@ int SnmpClient::build_snmp_get_packet(uint8_t *buf, int buf_size,
 // ------------------------ RESPONSE PARSER -----------------------------
 
 bool SnmpClient::parse_snmp_response(uint8_t *buf, int len, long *value) {
-  if (len < 2) return false;
+  // Hledáme SEQUENCE (0x30) VarBindList
+  int i = 0;
 
-  // Jednoduchý parser: hledá první INTEGER (0x02) nebo GAUGE/UNSIGNED (0x41/0x42)
-  for (int i = 0; i < len - 2; i++) {
-    uint8_t t = buf[i];
-    if (t == 0x02 || t == 0x41 || t == 0x42) {
-      int l = buf[i+1];
-      if (l <= 0 || l > 4 || i + 2 + l > len) continue;
-      long v = 0;
-      for (int j = 0; j < l; j++) {
-        v = (v << 8) | buf[i+2+j];
-      }
-      *value = v;
-      return true;
-    }
+  // Najdeme první VarBind (0x30)
+  // Struktura SNMP: SEQUENCE → PDU → VarBindList → VarBind
+  while (i < len - 2 && buf[i] != 0x30) i++;
+  if (i >= len - 2) return false;
+
+  // přeskoč délku SEQUENCE
+  i += 2;
+
+  // Najdeme další SEQUENCE = VarBind
+  while (i < len - 2 && buf[i] != 0x30) i++;
+  if (i >= len - 2) return false;
+
+  // přeskoč VarBind head
+  int vb_len = buf[i+1];
+  int vb_start = i;
+  i += 2;
+
+  // --- OID ---
+  if (buf[i] != 0x06) return false;
+  int oid_len = buf[i+1];
+  i += 2 + oid_len;
+
+  // --- VALUE ---
+  uint8_t type = buf[i];
+  uint8_t vlen = buf[i+1];
+  uint8_t *data = &buf[i+2];
+
+  if (type == 0x05) {
+    // NULL
+    return false;
   }
 
-  ESP_LOGW(TAG, "No numeric ASN.1 value found in SNMP response");
+  if (type == 0x02 || type == 0x41 || type == 0x42) {
+    long v = 0;
+    for (int j = 0; j < vlen; j++) {
+      v = (v << 8) | data[j];
+    }
+    *value = v;
+    return true;
+  }
+
   return false;
 }
+
 
 // ------------------------ PUBLIC GET -----------------------------
 
