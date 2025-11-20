@@ -10,7 +10,6 @@ class SnmpSensor : public sensor::Sensor, public PollingComponent {
  public:
   void set_host(const std::string &h) { host_ = h; }
   void set_community(const std::string &c) { community_ = c; }
-  void set_oid(const std::string &o) { oid_ = o; }
 
   void setup() override;
   void update() override;
@@ -18,10 +17,8 @@ class SnmpSensor : public sensor::Sensor, public PollingComponent {
  private:
   std::string host_;
   std::string community_;
-  std::string oid_;
 
   SnmpClient snmp_;
-  bool snmp_initialized_ = false;
 };
 
 }  // namespace snmp_sensor
