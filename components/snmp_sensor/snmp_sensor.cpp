@@ -48,9 +48,12 @@ void SnmpSensor::update() {
     return;
   }
 
-  ESP_LOGI(TAG, "SNMP MULTI OK: voltage=%ld capacity=%ld tempbatery=%ld",
-           values[0], values[1],values[2]);
+  ESP_LOGI(TAG, "MULTI-GET OK:");
+  ESP_LOGI(TAG, "  Input Voltage: %ld V", values[0]);
+  ESP_LOGI(TAG, "  Battery Cap: %ld %%", values[1]);
+  ESP_LOGI(TAG, "  Battery Temp: %.1f C", values[2] / 10.0f);
 
+  
   // zatím netlačíme hodnoty do senzorů – jen test
 }
 
