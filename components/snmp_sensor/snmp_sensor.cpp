@@ -1,50 +1,53 @@
 #include "snmp_sensor.h"
 #include "esphome/core/log.h"
-#include "snmp_client.h"
 
 namespace esphome {
 namespace snmp_sensor {
 
 static const char *TAG = "snmp_sensor";
 
-// Jeden společný SNMP klient pro všechny instance
-static SnmpClient snmp_client;
-static bool snmp_inited = false;
-
 void SnmpSensor::setup() {
-  if (!snmp_inited) {
-    ESP_LOGI(TAG, "Initializing SNMP client...");
+  ESP_LOGI(TAG, "Initializing SNMP client on port 50000...");
 
-    // Lokální port 50000 – vyhneme se 161, který je v ESP-IDF problémový
-    if (!snmp_client.begin(50000)) {
-      ESP_LOGE(TAG, "Failed to start SNMP client on port 50000!");
-    } else {
-      ESP_LOGI(TAG, "SNMP client ready on local port 50000");
-      snmp_inited = true;
-    }
+  if (!snmp_.begin(50000)) {
+    ESP_LOGE(TAG, "Failed to start SNMP client on port 50000!");
+  } else {
+    ESP_LOGI(TAG, "SNMP client ready.");
   }
 }
 
 void SnmpSensor::update() {
-  ESP_LOGD(TAG, "SNMP GET host=%s community=%s oid=%s",
-           host_.c_str(), community_.c_str(), oid_.c_str());
+  // 🔥 PROTOTYP: jeden multi-OID dotaz se dvěma OID
+  const char *oids[2] = {
+    "1.3.6.1.4.1.318.1.1.1.3.2.1.0",  // Input Voltage
+    "1.3.6.1.4.1.318.1.1.1.2.2.1.0"   // Battery Capacity
+  };
+  long values[2] = {0, 0};
 
-  long value = 0;
+  ESP_LOGD(TAG, "SNMP MULTI-GET host=%s community=%s",
+           host_.c_str(), community_.c_str());
 
-  bool ok = snmp_client.get(
+  bool ok = snmp_.get_many(
       host_.c_str(),
       community_.c_str(),
-      oid_.c_str(),
-      &value);
+      oids,
+      2,
+      values
+  );
 
   if (!ok) {
-    ESP_LOGW(TAG, "SNMP GET FAILED for oid=%s", oid_.c_str());
+    ESP_LOGW(TAG, "SNMP MULTI-GET FAILED");
     this->publish_state(NAN);
     return;
   }
 
-  ESP_LOGI(TAG, "SNMP OK: %ld", value);
-  this->publish_state((float) value);
+  long voltage = values[0];
+  long capacity = values[1];
+
+  ESP_LOGI(TAG, "SNMP MULTI OK: voltage=%ld, capacity=%ld", voltage, capacity);
+
+  // ⚠️ PROTOTYP: tenhle konkrétní SnmpSensor pořád publikuje jen voltage
+  this->publish_state((float) voltage);
 }
 
 }  // namespace snmp_sensor
