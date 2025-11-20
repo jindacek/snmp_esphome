@@ -25,6 +25,9 @@ static const char *UPS_OIDS[13] = {
 
 void SnmpSensor::setup() {
   ESP_LOGI(TAG, "snmp_sensor setup");
+  
+  // Zapne vypis HEX dumpu u multi-get
+  snmp_.enable_raw_dump(true);  
 }
 
 void SnmpSensor::update() {
