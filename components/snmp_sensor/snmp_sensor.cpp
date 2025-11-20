@@ -6,7 +6,6 @@ namespace snmp_sensor {
 
 static const char *TAG = "snmp_sensor";
 
-// 🔥 Seznam 13 OID
 static const char *UPS_OIDS[13] = {
   "1.3.6.1.4.1.318.1.1.1.2.2.3.0",
   "1.3.6.1.4.1.318.1.1.1.2.2.1.0",
@@ -24,54 +23,34 @@ static const char *UPS_OIDS[13] = {
 };
 
 void SnmpSensor::setup() {
-  ESP_LOGI(TAG, "SNMP multi-OID sensor init");
+  ESP_LOGI(TAG, "SNMP sensor init");
 
-  // 🔧 MUSÍ být jinak UDP nefunguje!
   if (!snmp_.begin(161)) {
-    ESP_LOGE(TAG, "SNMP UDP begin failed!");
+    ESP_LOGE(TAG, "Failed to start UDP");
     this->mark_failed();
   }
 }
 
 void SnmpSensor::update() {
-  const int COUNT = 13;
-  long values[COUNT];
-
-  ESP_LOGD(TAG, "SNMP MULTI-GET host=%s community=%s",
-           host_.c_str(), community_.c_str());
-
-  bool ok = snmp_.get_many(
-      host_.c_str(),
-      community_.c_str(),
-      UPS_OIDS,
-      COUNT,
-      values
-  );
-
-  if (!ok) {
-    ESP_LOGW(TAG, "MULTI-GET FAILED!");
+  long values[13];
+  if (!snmp_.get_many(host_.c_str(), community_.c_str(), UPS_OIDS, 13, values)) {
+    ESP_LOGW(TAG, "SNMP get_many failed");
     return;
   }
 
-  ESP_LOGI(TAG, "MULTI-GET OK:");
-  ESP_LOGI(TAG, "Runtime: %ld ticks", values[0]);
-  ESP_LOGI(TAG, "Battery Cap: %ld %%", values[1]);
-  ESP_LOGI(TAG, "Battery Temp: %ld", values[2]);
-
-  // Publikace do template senzorů v YAML
-  id(ups_runtime).publish_state(values[0] / 100.0f);
-  id(ups_battery_capacity).publish_state(values[1]);
-  id(ups_battery_temp).publish_state(values[2] / 10.0f);
-  id(ups_battery_voltage).publish_state(values[3]);
-  id(ups_input_voltage).publish_state(values[4]);
-  id(ups_output_voltage).publish_state(values[5]);
-  id(ups_load).publish_state(values[6]);
-  id(ups_output_status).publish_state(values[7]);
-  id(ups_model).publish_state(values[8]);
-  id(ups_name).publish_state(values[9]);
-  id(ups_manufacture_date).publish_state(values[10]);
-  id(ups_last_battery_replacement).publish_state(values[11]);
-  id(ups_last_start_time).publish_state(values[12]);
+  if (runtime_sensor_) runtime_sensor_->publish_state(values[0] / 100.0f);
+  if (battery_capacity_sensor_) battery_capacity_sensor_->publish_state(values[1]);
+  if (battery_temp_sensor_) battery_temp_sensor_->publish_state(values[2] / 10.0f);
+  if (battery_voltage_sensor_) battery_voltage_sensor_->publish_state(values[3]);
+  if (input_voltage_sensor_) input_voltage_sensor_->publish_state(values[4]);
+  if (output_voltage_sensor_) output_voltage_sensor_->publish_state(values[5]);
+  if (load_sensor_) load_sensor_->publish_state(values[6]);
+  if (output_status_sensor_) output_status_sensor_->publish_state(values[7]);
+  if (model_sensor_) model_sensor_->publish_state(values[8]);
+  if (name_sensor_) name_sensor_->publish_state(values[9]);
+  if (manufacture_date_sensor_) manufacture_date_sensor_->publish_state(values[10]);
+  if (last_battery_replacement_sensor_) last_battery_replacement_sensor_->publish_state(values[11]);
+  if (last_start_time_sensor_) last_start_time_sensor_->publish_state(values[12]);
 }
 
 }  // namespace snmp_sensor
