@@ -272,8 +272,8 @@ bool SnmpClient::get_many(const char *host,
 
         long val = -1;
 
-        // numeric ASN types
-        if (vtag == 0x02 || vtag == 0x41 || vtag == 0x42) {
+        // numeric ASN types: INTEGER, UNSIGNED32, GAUGE32, TIMETICKS
+        if (vtag == 0x02 || vtag == 0x41 || vtag == 0x42 || vtag == 0x43) {
           val = 0;
           for (int j = 0; j < vlen; j++)
             val = (val << 8) | resp[val_tlv + 2 + j];
