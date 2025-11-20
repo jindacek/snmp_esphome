@@ -238,6 +238,12 @@ bool SnmpClient::get_many(const char *host,
     if (size > 0) {
       uint8_t resp[300];
       int n = udp_.read(resp, sizeof(resp));
+      ESP_LOGI("snmp_dump", "--- SNMP RAW RESPONSE (%d bytes) ---", n);
+      for (int i = 0; i < n; i++) {
+        if (i % 16 == 0) ESP_LOGI("snmp_dump", "");
+        ESP_LOGI("snmp_dump", "%02X ", resp[i]);
+      }
+      ESP_LOGI("snmp_dump", "\n--- END RAW ---");
       if (n > 0) {
         bool ok = parse_snmp_response_multi(resp, n, values, num_oids);
         if (!ok) {
