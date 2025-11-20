@@ -3,7 +3,7 @@ import esphome.config_validation as cv
 
 from esphome.const import (
     CONF_ID,
-    CONF_UPDATE_INTERVAL
+    CONF_UPDATE_INTERVAL,
 )
 
 from esphome.components import sensor
@@ -56,8 +56,9 @@ async def to_code(config):
     var = cg.new_Pvariable(
         config[CONF_ID],
         config[CONF_HOST],
-        config[CONF_COMMUNITY]
+        config[CONF_COMMUNITY],
     )
+
     await cg.register_component(var, config)
 
     if CONF_RUNTIME in config:
