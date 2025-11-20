@@ -92,7 +92,8 @@ void SnmpSensor::update() {
 
   // Dump všech hodnot
   ESP_LOGI(TAG, "MULTI-GET OK:");
-  ESP_LOGI(TAG, "  Runtime: %ld Sec", values[0]);
+  long runtime_sec = (values[0] >= 0) ? (values[0] / 100) : values[0];
+  ESP_LOGI(TAG, "  Runtime: %ld Sec", runtime_sec);
   ESP_LOGI(TAG, "  Battery Cap: %ld %%", values[1]);
   ESP_LOGI(TAG, "  Battery Temp: %ld C", values[2]);
   ESP_LOGI(TAG, "  Battery Voltage: %ld V", values[3]);
