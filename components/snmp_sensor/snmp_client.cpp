@@ -251,6 +251,10 @@ bool SnmpClient::get_many(const char *host,
 
         // VALUE TLV začíná hned za OID
         int val_tlv = pos + 2 + oid_len;
+        // Skip NULL between OID and value
+        if (resp[val_tlv] == 0x05 && resp[val_tlv+1] == 0x00) {
+            val_tlv += 2;
+        }
         uint8_t vtag = resp[val_tlv];
         uint8_t vlen = resp[val_tlv + 1];
 
