@@ -36,8 +36,11 @@ static int encode_oid(const char *oid_str, uint8_t *out, int max_len) {
 
   int p = 0;
   if (p >= max_len) return -1;
+
+  // první dva: 40*X + Y
   out[p++] = (uint8_t)(nums[0] * 40 + nums[1]);
 
+  // zbytek v base-128
   for (int i = 2; i < count; i++) {
     uint32_t v = (uint32_t) nums[i];
     uint8_t tmp[8];
@@ -120,7 +123,7 @@ int SnmpClient::build_snmp_get_packet(uint8_t *buf, int buf_size,
   *p++ = 0x05;
   *p++ = 0x00;
 
-  // Prepočty délek
+  // Přepočet délek
   *len_vb    = (uint8_t)(p - (len_vb + 1));
   *len_vbl   = (uint8_t)(p - (len_vbl + 1));
   *len_pdu   = (uint8_t)(p - (len_pdu + 1));
@@ -134,21 +137,16 @@ int SnmpClient::build_snmp_get_packet(uint8_t *buf, int buf_size,
 bool SnmpClient::parse_snmp_response(uint8_t *buf, int len, long *value) {
   if (len < 2) return false;
 
-  // Projdeme buffer od KONCE – hledáme poslední INTEGER / GAUGE / UNSIGNED
-  for (int i = len - 2; i >= 0; i--) {
+  // Jednoduchý parser: hledá první INTEGER (0x02) nebo GAUGE/UNSIGNED (0x41/0x42)
+  for (int i = 0; i < len - 2; i++) {
     uint8_t t = buf[i];
-
-    // INTEGER (0x02), GAUGE32 (0x41), UNSIGNED32 (0x42)
     if (t == 0x02 || t == 0x41 || t == 0x42) {
-      if (i + 1 >= len) continue;
-      int l = buf[i + 1];
+      int l = buf[i+1];
       if (l <= 0 || l > 4 || i + 2 + l > len) continue;
-
       long v = 0;
       for (int j = 0; j < l; j++) {
-        v = (v << 8) | buf[i + 2 + j];
+        v = (v << 8) | buf[i+2+j];
       }
-
       *value = v;
       return true;
     }
@@ -157,7 +155,6 @@ bool SnmpClient::parse_snmp_response(uint8_t *buf, int len, long *value) {
   ESP_LOGW(TAG, "No numeric ASN.1 value found in SNMP response");
   return false;
 }
-
 
 // ------------------------ PUBLIC GET -----------------------------
 
@@ -178,7 +175,8 @@ bool SnmpClient::get(const char *host,
     return false;
   }
 
-  udp_.beginPacket(ip, 161);   // server port UPS
+  // SNMP server port je 161
+  udp_.beginPacket(ip, 161);
   udp_.write(packet, plen);
   udp_.endPacket();
 
