@@ -26,7 +26,7 @@ void SnmpSensor::update() {
 
   // 🔥 PROTOTYP: jeden multi-OID dotaz se dvěma OID
   const char *oids[13] = {
-    "1.3.6.1.4.1.318.1.1.1.2.2.3.0",  // 0 Runtime seconds
+    "1.3.6.1.2.1.1.3.0",  // 0 Runtime seconds
     "1.3.6.1.4.1.318.1.1.1.2.2.1.0",  // 1 Battery capacity
     "1.3.6.1.4.1.318.1.1.1.2.2.2.0",  // 2 Battery temp ×10
     "1.3.6.1.4.1.318.1.1.1.2.2.8.0",  // 3 Battery voltage
