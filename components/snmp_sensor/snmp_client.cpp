@@ -17,6 +17,7 @@ bool SnmpClient::begin(uint16_t local_port) {
 
 // ------------------------ OID ENCODE -----------------------------
 
+// Převede "1.3.6.1.4.1.318.1.1.1.3.2.1.0" na BER OID
 static int encode_oid(const char *oid_str, uint8_t *out, int max_len) {
   int nums[32];
   int count = 0;
@@ -34,6 +35,7 @@ static int encode_oid(const char *oid_str, uint8_t *out, int max_len) {
   if (count < 2) return -1;
 
   int p = 0;
+  if (p >= max_len) return -1;
   out[p++] = (uint8_t)(nums[0] * 40 + nums[1]);
 
   for (int i = 2; i < count; i++) {
@@ -76,38 +78,59 @@ int SnmpClient::build_snmp_get_packet_multi(uint8_t *buf, int buf_size,
 
   uint8_t *p = buf;
 
-  *p++ = 0x30;      // SEQUENCE
+  // Outer SEQUENCE
+  *p++ = 0x30;
   uint8_t *len_total = p++;
 
-  *p++ = 0x02; *p++ = 0x01; *p++ = 0x00;  // version
+  // version INTEGER 0
+  *p++ = 0x02; *p++ = 0x01; *p++ = 0x00;
 
+  // community
   size_t clen = strlen(community);
-  *p++ = 0x04; *p++ = clen;
+  if (clen > 60) return -1;
+  *p++ = 0x04;
+  *p++ = (uint8_t)clen;
   memcpy(p, community, clen);
   p += clen;
 
-  *p++ = 0xA0;      // PDU
+  // PDU: GetRequest = 0xA0
+  *p++ = 0xA0;
   uint8_t *len_pdu = p++;
 
-  *p++ = 0x02; *p++ = 0x01; *p++ = 0x01;  // request-id
-  *p++ = 0x02; *p++ = 0x01; *p++ = 0x00;  // error-status
-  *p++ = 0x02; *p++ = 0x01; *p++ = 0x00;  // error-index
+  // request-id INTEGER 1
+  *p++ = 0x02; *p++ = 0x01; *p++ = 0x01;
 
-  *p++ = 0x30;      // VarBindList
+  // error-status
+  *p++ = 0x02; *p++ = 0x01; *p++ = 0x00;
+
+  // error-index
+  *p++ = 0x02; *p++ = 0x01; *p++ = 0x00;
+
+  // VarBind list (sequence)
+  *p++ = 0x30;
   uint8_t *len_vbl = p++;
 
   for (int idx = 0; idx < num_oids; idx++) {
-    *p++ = 0x30;                      // VarBind
-    uint8_t *len_vb = p++;
-
     uint8_t oid[64];
     int oid_len = encode_oid(oids[idx], oid, sizeof(oid));
+    if (oid_len <= 0) {
+      ESP_LOGE(TAG, "encode_oid failed for %s", oids[idx]);
+      return -1;
+    }
 
-    *p++ = 0x06; *p++ = oid_len;
+    // VarBind
+    *p++ = 0x30;
+    uint8_t *len_vb = p++;
+
+    // OID
+    *p++ = 0x06;
+    *p++ = (uint8_t) oid_len;
     memcpy(p, oid, oid_len);
     p += oid_len;
 
-    *p++ = 0x05; *p++ = 0x00;        // value = NULL
+    // value = NULL
+    *p++ = 0x05;
+    *p++ = 0x00;
 
     *len_vb = (uint8_t)(p - (len_vb + 1));
   }
@@ -129,12 +152,13 @@ bool SnmpClient::parse_snmp_response(uint8_t *buf, int len, long *value) {
   return true;
 }
 
-// ------------------------ RESPONSE PARSER – multi -----------------------------
+// ------------------------ RESPONSE PARSER – multi (původní, nepoužíváme) -----------------------------
 
 bool SnmpClient::parse_snmp_response_multi(uint8_t *buf, int len,
                                            long *values,
                                            int num_oids) {
-  return false; // Nepoužívá se, máme vlastní parser v get_many()
+  // Ponecháno jen pro kompatibilitu – aktuálně nepoužívané.
+  return false;
 }
 
 // ------------------------ PUBLIC GET – single OID -----------------------------
@@ -152,7 +176,7 @@ bool SnmpClient::get(const char *host,
   return true;
 }
 
-// ------------------------ PUBLIC GET – multi OID -----------------------------
+// ------------------------ PUBLIC GET – multi OID (numerické) -----------------------------
 
 bool SnmpClient::get_many(const char *host,
                           const char *community,
@@ -189,24 +213,28 @@ bool SnmpClient::get_many(const char *host,
     int pos = 0;
     while (pos < n - 4) {
 
-      if (resp[pos] == 0x06) {
+      if (resp[pos] == 0x06) {  // OID
         int oid_len = resp[pos+1];
         const uint8_t *oid_ptr = &resp[pos+2];
 
         int val_tlv = pos + 2 + oid_len;
-        if (resp[val_tlv] == 0x05) val_tlv += 2;
+        // Skip NULL mezi OID a hodnotou
+        if (resp[val_tlv] == 0x05 && resp[val_tlv+1] == 0x00)
+          val_tlv += 2;
 
         uint8_t vtag = resp[val_tlv];
         uint8_t vlen = resp[val_tlv+1];
 
         long val = -1;
 
+        // INTEGER, GAUGE32, UNSIGNED32, TIMETICKS
         if (vtag == 0x02 || vtag == 0x41 || vtag == 0x42 || vtag == 0x43) {
           val = 0;
           for (int j = 0; j < vlen; j++)
             val = (val << 8) | resp[val_tlv + 2 + j];
         }
 
+        // Match OID
         for (int i = 0; i < count; i++) {
           uint8_t expected[64];
           int elen = encode_oid(oids[i], expected, sizeof(expected));
@@ -217,6 +245,80 @@ bool SnmpClient::get_many(const char *host,
             if (values[i] == -1) {
               values[i] = val;
               filled++;
+            }
+          }
+        }
+      }
+
+      pos++;
+    }
+  }
+
+  return (filled > 0);
+}
+
+// ------------------------ PUBLIC GET – multi OID (string) -----------------------------
+
+bool SnmpClient::get_many_string(const char *host,
+                                 const char *community,
+                                 const char **oids,
+                                 int count,
+                                 std::string *values)
+{
+  for (int i = 0; i < count; i++)
+    values[i].clear();
+
+  IPAddress ip;
+  if (!ip.fromString(host)) return false;
+
+  uint8_t packet[512];
+  int plen = build_snmp_get_packet_multi(packet, sizeof(packet), community, oids, count);
+  if (plen <= 0) return false;
+
+  udp_.beginPacket(ip, 161);
+  udp_.write(packet, plen);
+  udp_.endPacket();
+
+  uint32_t deadline = millis() + 1000;
+  int filled = 0;
+
+  uint8_t resp[512];
+
+  while (millis() < deadline && filled < count) {
+    int size = udp_.parsePacket();
+    if (!size) continue;
+
+    int n = udp_.read(resp, sizeof(resp));
+    if (n <= 0) continue;
+
+    int pos = 0;
+    while (pos < n - 4) {
+
+      if (resp[pos] == 0x06) {  // OID
+        int oid_len = resp[pos+1];
+        const uint8_t *oid_ptr = &resp[pos+2];
+
+        int val_tlv = pos + 2 + oid_len;
+        if (resp[val_tlv] == 0x05 && resp[val_tlv+1] == 0x00)
+          val_tlv += 2;
+
+        uint8_t vtag = resp[val_tlv];
+        uint8_t vlen = resp[val_tlv+1];
+
+        if (vtag == 0x04) {  // OCTET STRING
+          std::string s((char*)&resp[val_tlv+2], vlen);
+
+          for (int i = 0; i < count; i++) {
+            uint8_t expected[64];
+            int elen = encode_oid(oids[i], expected, sizeof(expected));
+
+            if (elen == oid_len &&
+                memcmp(expected, oid_ptr, oid_len) == 0)
+            {
+              if (values[i].empty()) {
+                values[i] = s;
+                filled++;
+              }
             }
           }
         }
