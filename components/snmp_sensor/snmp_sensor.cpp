@@ -23,6 +23,24 @@ static std::string convert_apc_date(const std::string &raw) {
   return std::string(out);
 }
 
+// Convert seconds → DDDd-HHh-MMm-SSs
+static std::string format_runtime(long seconds) {
+  if (seconds < 0) return "unknown";
+
+  long d = seconds / 86400;
+  seconds %= 86400;
+
+  long h = seconds / 3600;
+  seconds %= 3600;
+
+  long m = seconds / 60;
+  long s = seconds % 60;
+
+  char buf[32];
+  snprintf(buf, sizeof(buf), "%03ldd-%02ldh-%02ldm-%02lds", d, h, m, s);
+  return std::string(buf);
+}
+
 
 void SnmpSensor::setup() {
   ESP_LOGI(TAG, "snmp_sensor setup");
@@ -125,6 +143,9 @@ void SnmpSensor::update() {
 
   long runtime_sec = (values_num[0] >= 0) ? (values_num[0] / 100) : -1;
   ESP_LOGI(TAG, "  Runtime: %ld Sec", runtime_sec);
+  ESP_LOGI(TAG, "  Runtime formatted: %s", format_runtime(runtime_sec).c_str());
+
+  //ESP_LOGI(TAG, "  Runtime: %ld Sec", runtime_sec);
   ESP_LOGI(TAG, "  Battery Cap: %ld %%", values_num[1]);
   ESP_LOGI(TAG, "  Battery Temp: %ld C", values_num[2]);
   ESP_LOGI(TAG, "  Battery Voltage: %ld V", values_num[3]);
