@@ -7,44 +7,47 @@ namespace snmp_sensor {
 static const char *TAG = "snmp_sensor";
 
 void SnmpSensor::setup() {
-  ESP_LOGI(TAG, "SNMP sensor setup complete");
-  // NIC zde NEINICIALIZUJEME !
+  ESP_LOGI(TAG, "Initializing SNMP client on port 50000...");
+
+  if (!snmp_.begin(50000)) {
+    ESP_LOGE(TAG, "Failed to start SNMP client on port 50000!");
+  } else {
+    ESP_LOGI(TAG, "SNMP client ready.");
+  }
 }
 
 void SnmpSensor::update() {
+  // 🔥 PROTOTYP: jeden multi-OID dotaz se dvěma OID
+  const char *oids[2] = {
+    "1.3.6.1.4.1.318.1.1.1.3.2.1.0",  // Input Voltage
+    "1.3.6.1.4.1.318.1.1.1.2.2.1.0"   // Battery Capacity
+  };
+  long values[2] = {0, 0};
 
-  // ---- Lazy init – první update po WiFi ----
-  if (!snmp_initialized_) {
-    ESP_LOGI(TAG, "Initializing SNMP client on port 50000...");
+  ESP_LOGD(TAG, "SNMP MULTI-GET host=%s community=%s",
+           host_.c_str(), community_.c_str());
 
-    if (!snmp_.begin(50000)) {
-      ESP_LOGE(TAG, "Failed to init SNMP on port 50000");
-      return;
-    }
-
-    snmp_initialized_ = true;
-    ESP_LOGI(TAG, "SNMP client ready.");
-  }
-
-  // ---- SNMP GET ----
-  ESP_LOGD(TAG, "SNMP GET host=%s community=%s oid=%s",
-           host_.c_str(), community_.c_str(), oid_.c_str());
-
-  long value = 0;
-  bool ok = snmp_.get(
+  bool ok = snmp_.get_many(
       host_.c_str(),
       community_.c_str(),
-      oid_.c_str(),
-      &value);
+      oids,
+      2,
+      values
+  );
 
   if (!ok) {
-    ESP_LOGW(TAG, "SNMP GET FAILED for oid=%s", oid_.c_str());
+    ESP_LOGW(TAG, "SNMP MULTI-GET FAILED");
     this->publish_state(NAN);
     return;
   }
 
-  ESP_LOGI(TAG, "SNMP OK: %ld", value);
-  this->publish_state((float) value);
+  long voltage = values[0];
+  long capacity = values[1];
+
+  ESP_LOGI(TAG, "SNMP MULTI OK: voltage=%ld, capacity=%ld", voltage, capacity);
+
+  // ⚠️ PROTOTYP: tenhle konkrétní SnmpSensor pořád publikuje jen voltage
+  this->publish_state((float) voltage);
 }
 
 }  // namespace snmp_sensor
