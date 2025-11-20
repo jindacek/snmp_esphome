@@ -12,6 +12,7 @@ void SnmpSensor::setup() {
 
 void SnmpSensor::update() {
 
+  // Odložená inicializace SNMP UDP
   static bool initialized = false;
   if (!initialized) {
     if (!snmp_.begin(50000)) {
@@ -22,7 +23,8 @@ void SnmpSensor::update() {
     initialized = true;
   }
 
-  const char *oids[13] = {
+  // OID seznam
+  const char *oids_num[8] = {
     "1.3.6.1.2.1.1.3.0",                       // 0 Runtime (TimeTicks)
     "1.3.6.1.4.1.318.1.1.1.2.2.1.0",           // 1 Battery capacity
     "1.3.6.1.4.1.318.1.1.1.2.2.2.0",           // 2 Battery temp
@@ -30,78 +32,94 @@ void SnmpSensor::update() {
     "1.3.6.1.4.1.318.1.1.1.3.2.1.0",           // 4 Input voltage
     "1.3.6.1.4.1.318.1.1.1.4.2.1.0",           // 5 Output voltage
     "1.3.6.1.4.1.318.1.1.1.4.2.3.0",           // 6 Load
-    "1.3.6.1.4.1.318.1.1.1.4.1.1.0",           // 7 Output status
-    "1.3.6.1.4.1.318.1.1.1.1.1.1.0",           // 8 Model (string - ignorujeme zatím)
-    "1.3.6.1.4.1.318.1.1.1.1.1.2.0",           // 9 Name (string)
-    "1.3.6.1.4.1.318.1.1.1.1.2.2.0",           // 10 Manufacture date (string)
-    "1.3.6.1.4.1.318.1.1.1.2.1.3.0",           // 11 Last bat replacement (string)
-    "1.3.6.1.4.1.318.1.1.1.7.2.4.0"            // 12 Last start time (string)
+    "1.3.6.1.4.1.318.1.1.1.4.1.1.0"            // 7 Output status
   };
 
-  long values[13];
-  for (int i = 0; i < 13; i++) values[i] = -1;
+  const char *oids_str[5] = {
+    "1.3.6.1.4.1.318.1.1.1.1.1.1.0",           // 0 Model
+    "1.3.6.1.4.1.318.1.1.1.1.1.2.0",           // 1 Name
+    "1.3.6.1.4.1.318.1.1.1.1.2.2.0",           // 2 Manufacture date
+    "1.3.6.1.4.1.318.1.1.1.2.1.3.0",           // 3 Last battery replacement
+    "1.3.6.1.4.1.318.1.1.1.7.2.4.0"            // 4 Last start time
+  };
+
+  long values_num[8];
+  for (int i = 0; i < 8; i++) values_num[i] = -1;
+
+  std::string values_str[5];
 
   ESP_LOGD(TAG, "SNMP MULTI-GET host=%s community=%s",
            host_.c_str(), community_.c_str());
 
+  // -------- Numerické hodnoty – batch po 3 --------
   const int BATCH = 3;
-  bool any_ok = false;
+  bool any_ok_num = false;
 
-  for (int start = 0; start < 13; start += BATCH) {
+  for (int start = 0; start < 8; start += BATCH) {
     int batch_count = BATCH;
-    if (start + batch_count > 13)
-      batch_count = 13 - start;
+    if (start + batch_count > 8)
+      batch_count = 8 - start;
 
     const char *batch_oids[BATCH];
     long batch_vals[BATCH];
 
     for (int i = 0; i < batch_count; i++) {
-      batch_oids[i] = oids[start + i];
+      batch_oids[i] = oids_num[start + i];
       batch_vals[i] = -1;
     }
 
     bool ok = snmp_.get_many(
-                host_.c_str(),
-                community_.c_str(),
-                batch_oids,
-                batch_count,
-                batch_vals);
+        host_.c_str(),
+        community_.c_str(),
+        batch_oids,
+        batch_count,
+        batch_vals
+    );
 
     if (!ok) {
-      ESP_LOGW(TAG, "SNMP MULTI-GET batch %d..%d FAILED",
+      ESP_LOGW(TAG, "SNMP MULTI-GET (numeric) batch %d..%d FAILED",
                start, start + batch_count - 1);
       continue;
     }
 
-    any_ok = true;
+    any_ok_num = true;
 
     for (int i = 0; i < batch_count; i++) {
-      values[start + i] = batch_vals[i];
+      values_num[start + i] = batch_vals[i];
     }
   }
 
-  if (!any_ok) {
-    ESP_LOGW(TAG, "SNMP MULTI-GET FAILED (all batches)");
+  // -------- Stringové hodnoty – jedním dotazem --------
+  bool ok_str = snmp_.get_many_string(
+      host_.c_str(),
+      community_.c_str(),
+      oids_str,
+      5,
+      values_str
+  );
+
+  if (!any_ok_num && !ok_str) {
+    ESP_LOGW(TAG, "SNMP MULTI-GET FAILED (numeric + string)");
     return;
   }
 
   ESP_LOGI(TAG, "MULTI-GET OK:");
 
-  long runtime_sec = (values[0] >= 0) ? (values[0] / 100) : -1;
+  long runtime_sec = (values_num[0] >= 0) ? (values_num[0] / 100) : -1;
   ESP_LOGI(TAG, "  Runtime: %ld Sec", runtime_sec);
-  ESP_LOGI(TAG, "  Battery Cap: %ld %%", values[1]);
-  ESP_LOGI(TAG, "  Battery Temp: %ld C", values[2]);
-  ESP_LOGI(TAG, "  Battery Voltage: %ld V", values[3]);
-  ESP_LOGI(TAG, "  Input Voltage: %ld V", values[4]);
-  ESP_LOGI(TAG, "  Output Voltage: %ld V", values[5]);
-  ESP_LOGI(TAG, "  Load: %ld %%", values[6]);
-  ESP_LOGI(TAG, "  Output Status: %ld", values[7]);
+  ESP_LOGI(TAG, "  Battery Cap: %ld %%", values_num[1]);
+  ESP_LOGI(TAG, "  Battery Temp: %ld C", values_num[2]);
+  ESP_LOGI(TAG, "  Battery Voltage: %ld V", values_num[3]);
+  ESP_LOGI(TAG, "  Input Voltage: %ld V", values_num[4]);
+  ESP_LOGI(TAG, "  Output Voltage: %ld V", values_num[5]);
+  ESP_LOGI(TAG, "  Load: %ld %%", values_num[6]);
+  ESP_LOGI(TAG, "  Output Status: %ld", values_num[7]);
 
-  ESP_LOGI(TAG, "  Model (string): %ld", values[8]);
-  ESP_LOGI(TAG, "  Name (string): %ld", values[9]);
-  ESP_LOGI(TAG, "  Manufacture Date (string): %ld", values[10]);
-  ESP_LOGI(TAG, "  Last Battery Replacement (string): %ld", values[11]);
-  ESP_LOGI(TAG, "  Last Start Time (string): %ld", values[12]);
+  ESP_LOGI(TAG, "  Model: %s", values_str[0].empty() ? "<none>" : values_str[0].c_str());
+  ESP_LOGI(TAG, "  Name: %s", values_str[1].empty() ? "<none>" : values_str[1].c_str());
+  ESP_LOGI(TAG, "  Manufacture Date: %s", values_str[2].empty() ? "<none>" : values_str[2].c_str());
+  ESP_LOGI(TAG, "  Last Battery Replacement: %s", values_str[3].empty() ? "<none>" : values_str[3].c_str());
+  ESP_LOGI(TAG, "  Last Start Time: %s", values_str[4].empty() ? "<none>" : values_str[4].c_str());
 }
 
 }  // namespace snmp_sensor
