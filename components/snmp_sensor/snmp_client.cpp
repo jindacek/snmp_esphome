@@ -215,8 +215,10 @@ bool SnmpClient::get_many(const char *host,
                           int count,
                           long *values)
 {
-  // Reset output values
-  for (int i = 0; i < count; i++) values[i] = -1;
+  // Reset výstupních hodnot
+  for (int i = 0; i < count; i++) {
+    values[i] = -1;
+  }
 
   IPAddress ip;
   if (!ip.fromString(host)) return false;
@@ -230,62 +232,76 @@ bool SnmpClient::get_many(const char *host,
   udp_.write(packet, plen);
   udp_.endPacket();
 
-  uint32_t deadline = millis() + 500;
+  uint32_t deadline = millis() + 1000;
+
+  // Kolik OID už máme?
+  int filled = 0;
+
+  // Buffer pro odpovědi
   uint8_t resp[512];
 
-  while (millis() < deadline) {
+  while (millis() < deadline && filled < count) {
+
     int size = udp_.parsePacket();
     if (!size) continue;
 
     int n = udp_.read(resp, sizeof(resp));
     if (n <= 0) continue;
 
-    // --- MULTI PARSER ---
+    // --- PARSOVÁNÍ ---
     int pos = 0;
+
     while (pos < n - 4) {
 
-      // Hledáme OID tag (0x06)
+      // Najdi začátek OID
       if (resp[pos] == 0x06) {
+
         int oid_len = resp[pos+1];
         const uint8_t *oid_ptr = &resp[pos+2];
 
-        // VALUE TLV začíná hned za OID
+        // VALUE TLV (za NULL nebo hned)
         int val_tlv = pos + 2 + oid_len;
-        // Skip NULL between OID and value
+
+        // Skip NULL
         if (resp[val_tlv] == 0x05 && resp[val_tlv+1] == 0x00) {
-            val_tlv += 2;
+          val_tlv += 2;
         }
+
         uint8_t vtag = resp[val_tlv];
         uint8_t vlen = resp[val_tlv + 1];
 
-        long val = 0;
+        long val = -1;
 
-        // Jen pro numeric ASN.1 types
+        // numeric ASN types
         if (vtag == 0x02 || vtag == 0x41 || vtag == 0x42) {
+          val = 0;
           for (int j = 0; j < vlen; j++)
             val = (val << 8) | resp[val_tlv + 2 + j];
         }
 
-        // Porovnání OID se seznamem
+        // MATCH OID
         for (int i = 0; i < count; i++) {
+
           uint8_t expected[64];
           int elen = encode_oid(oids[i], expected, sizeof(expected));
 
           if (elen == oid_len &&
               memcmp(expected, oid_ptr, oid_len) == 0)
           {
-            values[i] = val;
+            if (values[i] == -1) {
+              values[i] = val;
+              filled++;
+            }
           }
         }
       }
 
       pos++;
     }
-
-    return true;
   }
 
-  return false;
+  return (filled > 0);
 }
+
 
 
