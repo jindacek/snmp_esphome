@@ -6,7 +6,7 @@ namespace snmp_sensor {
 
 static const char *TAG = "snmp_sensor";
 
-// 🔥 TADY JE NAŠICH 13 OID — MUSÍ BÝT MIMO FUNKCI!
+// 🔥 Tady je 13 OID — mimo funkci, staticky
 static const char *UPS_OIDS[13] = {
   "1.3.6.1.4.1.318.1.1.1.2.2.3.0",  // 0 Runtime seconds
   "1.3.6.1.4.1.318.1.1.1.2.2.1.0",  // 1 Battery capacity
@@ -25,9 +25,6 @@ static const char *UPS_OIDS[13] = {
 
 void SnmpSensor::setup() {
   ESP_LOGI(TAG, "snmp_sensor setup");
-  
-  // Zapne vypis HEX dumpu u multi-get
-  snmp_.enable_raw_dump(true);  
 }
 
 void SnmpSensor::update() {
@@ -50,7 +47,7 @@ void SnmpSensor::update() {
     return;
   }
 
-  // Dump všech hodnot
+  // Dump hodnot
   ESP_LOGI(TAG, "MULTI-GET OK:");
   ESP_LOGI(TAG, "  Runtime: %ld ticks = %.1f s", values[0], values[0] / 100.0f);
   ESP_LOGI(TAG, "  Battery Cap: %ld %%", values[1]);
