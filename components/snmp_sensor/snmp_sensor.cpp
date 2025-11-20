@@ -25,9 +25,10 @@ void SnmpSensor::update() {
   }
 
   // 🔥 PROTOTYP: jeden multi-OID dotaz se dvěma OID
-  const char *oids[2] = {
+  const char *oids[3] = {
     "1.3.6.1.4.1.318.1.1.1.3.2.1.0",  // Input Voltage
-    "1.3.6.1.4.1.318.1.1.1.2.2.1.0"   // Battery Capacity
+    "1.3.6.1.4.1.318.1.1.1.2.2.1.0",   // Battery Capacity
+    "1.3.6.1.4.1.318.1.1.1.2.2.2.0"   // Battery Temperature
   };
   long values[2] = {0, 0};
 
@@ -47,8 +48,8 @@ void SnmpSensor::update() {
     return;
   }
 
-  ESP_LOGI(TAG, "SNMP MULTI OK: voltage=%ld capacity=%ld",
-           values[0], values[1]);
+  ESP_LOGI(TAG, "SNMP MULTI OK: voltage=%ld capacity=%ld tempbatery=%ld",
+           values[0], values[1],values[2]);
 
   // zatím netlačíme hodnoty do senzorů – jen test
 }
