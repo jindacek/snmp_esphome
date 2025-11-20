@@ -1,4 +1,5 @@
 #pragma once
+
 #include "esphome/core/component.h"
 #include "esphome/components/sensor/sensor.h"
 #include "snmp_client.h"
@@ -6,18 +7,17 @@
 namespace esphome {
 namespace snmp_sensor {
 
-class SnmpSensor : public sensor::Sensor, public PollingComponent {
+class SnmpSensor : public PollingComponent {
  public:
-  void set_host(const std::string &h) { host_ = h; }
-  void set_community(const std::string &c) { community_ = c; }
+  SnmpSensor(const std::string &host, const std::string &community)
+      : host_(host), community_(community) {}
 
   void setup() override;
   void update() override;
 
- private:
+ protected:
   std::string host_;
   std::string community_;
-
   SnmpClient snmp_;
 };
 
