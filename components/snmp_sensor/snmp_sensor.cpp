@@ -40,21 +40,53 @@ void SnmpSensor::update() {
     "1.3.6.1.4.1.318.1.1.1.2.1.3.0",  // 11 Last battery replacement
     "1.3.6.1.4.1.318.1.1.1.7.2.4.0"   // 12 Last start time
   };
-  long values[13] = {0};
+  long values[13];
+  for (int i = 0; i < 13; i++) {
+    values[i] = -1;
+  }
 
   ESP_LOGD(TAG, "SNMP MULTI-GET host=%s community=%s",
            host_.c_str(), community_.c_str());
 
-  bool ok = snmp_.get_many(
-      host_.c_str(),
-      community_.c_str(),
-      oids,
-      13,
-      values
-  );
+  const int BATCH = 3;
+  bool any_ok = false;
 
-  if (!ok) {
-    ESP_LOGW(TAG, "SNMP MULTI-GET FAILED");
+  for (int start = 0; start < 13; start += BATCH) {
+    int batch_count = BATCH;
+    if (start + batch_count > 13)
+      batch_count = 13 - start;
+
+    const char *batch_oids[BATCH];
+    long batch_vals[BATCH];
+
+    for (int i = 0; i < batch_count; i++) {
+      batch_oids[i] = oids[start + i];
+      batch_vals[i] = -1;
+    }
+
+    bool ok = snmp_.get_many(
+        host_.c_str(),
+        community_.c_str(),
+        batch_oids,
+        batch_count,
+        batch_vals
+    );
+
+    if (!ok) {
+      ESP_LOGW(TAG, "SNMP MULTI-GET batch %d..%d FAILED",
+               start, start + batch_count - 1);
+      continue;
+    }
+
+    any_ok = true;
+
+    for (int i = 0; i < batch_count; i++) {
+      values[start + i] = batch_vals[i];
+    }
+  }
+
+  if (!any_ok) {
+    ESP_LOGW(TAG, "SNMP MULTI-GET FAILED (all batches)");
     return;
   }
 
@@ -73,6 +105,7 @@ void SnmpSensor::update() {
   ESP_LOGI(TAG, "  Manufacture Date: %ld", values[10]);
   ESP_LOGI(TAG, "  Last Battery Replacement: %ld", values[11]);
   ESP_LOGI(TAG, "  Last Start Time: %ld", values[12]);
+
 
   
   // zatím netlačíme hodnoty do senzorů – jen test
