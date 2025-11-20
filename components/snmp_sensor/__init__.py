@@ -1,6 +1,7 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
-from esphome.const import CONF_ID, CONF_HOST, CONF_UPDATE_INTERVAL
+
+from esphome.const import CONF_ID, CONF_UPDATE_INTERVAL
 
 DEPENDENCIES = ["network"]
 AUTO_LOAD = ["sensor"]
@@ -8,6 +9,7 @@ AUTO_LOAD = ["sensor"]
 snmp_sensor_ns = cg.esphome_ns.namespace("snmp_sensor")
 SnmpSensor = snmp_sensor_ns.class_("SnmpSensor", cg.PollingComponent)
 
+CONF_HOST = "host"
 CONF_COMMUNITY = "community"
 
 CONFIG_SCHEMA = cv.Schema({
