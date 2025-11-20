@@ -1,13 +1,10 @@
 #pragma once
-
 #include "esphome/core/component.h"
 #include "esphome/components/sensor/sensor.h"
 #include "snmp_client.h"
 
 namespace esphome {
 namespace snmp_sensor {
-
-extern SnmpClient global_snmp_client;
 
 class SnmpSensor : public sensor::Sensor, public PollingComponent {
  public:
