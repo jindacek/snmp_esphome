@@ -75,7 +75,7 @@ void SnmpSensor::update() {
   }
 
   // OID seznam
-  const char *oids_num[12] = {
+  const char *oids_num[14] = {
     "1.3.6.1.2.1.1.3.0",                       // 0 Runtime (TimeTicks)
     "1.3.6.1.4.1.318.1.1.1.2.2.1.0",           // 1 Battery capacity
     "1.3.6.1.4.1.318.1.1.1.2.2.2.0",           // 2 Battery temp
@@ -87,7 +87,9 @@ void SnmpSensor::update() {
     "1.3.6.1.4.1.318.1.1.1.2.2.3.0",           // 8 Remaining runtime (TimeTicks) 
     "1.3.6.1.4.1.318.1.1.1.7.2.3.0",           // 9 Self test result
     "1.3.6.1.4.1.318.1.1.1.2.2.4.0",           // 10 Battery replace indicator
-    "1.3.6.1.4.1.318.1.1.1.4.1.2.0"            // 11 Output Source (integer)
+    "1.3.6.1.4.1.318.1.1.1.4.1.2.0",           // 11 Output Source (integer)
+    "1.3.6.1.4.1.318.1.1.1.3.2.4.0",           // 12 Input frequency
+    "1.3.6.1.4.1.318.1.1.1.4.2.2.0"            // 13 Output frequency
   };
 
   const char *oids_str[6] = {
@@ -99,8 +101,8 @@ void SnmpSensor::update() {
     "1.3.6.1.4.1.318.1.1.1.1.2.3.0"            // 5 Serial number
   };
 
-  long values_num[12];
-  for (int i = 0; i < 12; i++) values_num[i] = -1;
+  long values_num[14];
+  for (int i = 0; i < 14; i++) values_num[i] = -1;
 
   std::string values_str[6];
 
@@ -111,10 +113,10 @@ void SnmpSensor::update() {
   const int BATCH = 3;
   bool any_ok_num = false;
 
-  for (int start = 0; start < 12; start += BATCH) {
+  for (int start = 0; start < 14; start += BATCH) {
     int batch_count = BATCH;
-    if (start + batch_count > 12)
-      batch_count = 12 - start;
+    if (start + batch_count > 14)
+      batch_count = 14 - start;
 
     const char *batch_oids[BATCH];
     long batch_vals[BATCH];
@@ -268,7 +270,10 @@ for (int start = 0; start < NSTR; start += BATCH_STR) {
   else if (os == 12) os_text = "switchingToBypass";
   else if (os == 13) os_text = "onSmartTrim";
   ESP_LOGI(TAG, "  Output Source: %ld (%s)", os, os_text);
-  
+  // Input Frequency (index 12)
+  ESP_LOGI(TAG, "  Input Frequency: %ld Hz", values_num[12]);
+  // Output Frequency (index 13)
+  ESP_LOGI(TAG, "  Output Frequency: %ld Hz", values_num[13]); 
 
 
 
