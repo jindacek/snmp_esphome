@@ -1,7 +1,10 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome.components import sensor, text_sensor
-from esphome.const import CONF_ID, CONF_UPDATE_INTERVAL
+from esphome.automation import maybe_simple_id
+from esphome.const import *
+from esphome.const import CONF_ID, CONF_UPDATE_INTERVAL, ENTITY_CATEGORY_CONFIG, CONF_NAME
+from esphome.core import coroutine_with_priority
 
 from .component import snmp_ns, SnmpSensor
 
