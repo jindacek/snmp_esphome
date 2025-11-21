@@ -265,86 +265,96 @@ bool SnmpClient::get_many_string(const char *host,
                                  int count,
                                  std::string *values)
 {
-  // Inicializace výstupu
+  // vyčistit výstup
   for (int i = 0; i < count; i++)
     values[i].clear();
 
   IPAddress ip;
   if (!ip.fromString(host)) return false;
 
+  // 1) VYČISTIT RX BUFFER (zbytky z předchozího numeric get_many)
+  while (udp_.parsePacket() > 0) {
+    uint8_t dump[256];
+    udp_.read(dump, sizeof(dump));
+    delay(2);
+  }
+
+  // 2) postavit request
   uint8_t packet[512];
   int plen = build_snmp_get_packet_multi(packet, sizeof(packet),
                                          community, oids, count);
   if (plen <= 0) return false;
 
+  // 3) poslat
   udp_.beginPacket(ip, 161);
   udp_.write(packet, plen);
   udp_.endPacket();
 
-  uint32_t deadline = millis() + 1000;
+  // 4) čekat na odpověď a parsovat
+  uint32_t deadline = millis() + 1200;
   int filled = 0;
 
-  uint8_t resp[512];
+  uint8_t resp[700];
 
   while (millis() < deadline && filled < count) {
     int size = udp_.parsePacket();
-    if (!size) continue;
+    if (!size) {
+      delay(5);
+      continue;
+    }
 
     int n = udp_.read(resp, sizeof(resp));
     if (n <= 0) continue;
 
+    // scan po OID TLV
     int pos = 0;
-    while (pos < n - 4) {
+    while (pos < n - 6) {
+      if (resp[pos] == 0x06) {               // OID tag
+        int oid_len = resp[pos + 1];
+        const uint8_t *oid_ptr = &resp[pos + 2];
 
-      if (resp[pos] == 0x06) {        // OID
-        int oid_len = resp[pos+1];
-        const uint8_t *oid_ptr = &resp[pos+2];
-
-        // Hodnotová část
         int val_tlv = pos + 2 + oid_len;
 
-        // Odstranění NULL paddingu
-        if (resp[val_tlv] == 0x05 && resp[val_tlv+1] == 0x00)
+        // některé odpovědi mají NULL padding
+        if (val_tlv + 1 < n && resp[val_tlv] == 0x05 && resp[val_tlv + 1] == 0x00) {
           val_tlv += 2;
+        }
+        if (val_tlv + 2 >= n) { pos++; continue; }
 
         uint8_t vtag = resp[val_tlv];
         uint8_t vlen = resp[val_tlv + 1];
 
-        // Hledáme pouze OCTET STRING (0x04)
-        if (vtag == 0x04) {
-
-          std::string s;
-          s.reserve(vlen);
-
+        if (vtag == 0x04) {                 // OCTET STRING
           int base = val_tlv + 2;
-          for (int j = 0; j < vlen; j++) {
-            uint8_t b = resp[base + j];
+          if (base + vlen <= n) {
 
-            // odstranění ne-ASCII bordelu
-            if (b >= 32 && b <= 126)
-              s.push_back((char)b);
-          }
+            // složit string: bereme všechny bajty kromě 0x00 na konci
+            std::string s;
+            s.reserve(vlen);
 
-          // Porovnání OID
-          for (int i = 0; i < count; i++) {
-            uint8_t expected[64];
-            int elen = encode_oid(oids[i], expected, sizeof(expected));
+            for (int j = 0; j < vlen; j++) {
+              uint8_t b = resp[base + j];
+              if (b != 0x00) s.push_back((char)b);
+            }
 
-            if (elen == oid_len &&
-                memcmp(expected, oid_ptr, oid_len) == 0)
-            {
-              if (values[i].empty()) {
-                values[i] = s;
-                filled++;
+            // match na požadovaný OID
+            for (int i = 0; i < count; i++) {
+              uint8_t expected[64];
+              int elen = encode_oid(oids[i], expected, sizeof(expected));
+              if (elen == oid_len && memcmp(expected, oid_ptr, oid_len) == 0) {
+                if (values[i].empty()) {
+                  values[i] = s;
+                  filled++;
+                }
               }
             }
           }
         }
       }
-
       pos++;
     }
   }
 
   return (filled > 0);
 }
+
