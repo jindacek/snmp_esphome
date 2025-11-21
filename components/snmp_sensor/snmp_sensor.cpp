@@ -214,7 +214,7 @@ for (int start = 0; start < NSTR; start += BATCH_STR) {
   // Self-test result (index 9)
   long st = values_num[9];
   const char *st_text = "unknown";
-  --------------------------------
+  //--------------------------------
   if      (st == 1) st_text = "Passed";
   else if (st == 2) st_text = "Failed";
   else if (st == 3) st_text = "Invalid";
@@ -226,7 +226,7 @@ for (int start = 0; start < NSTR; start += BATCH_STR) {
   // Battery replace indicator (index 10)
   long br = values_num[10];
   const char *br_text = "unknown";
-  --------------------------------
+  //--------------------------------
   if      (br == 1) br_text = "OK";
   else if (br == 2) br_text = "Replace battery";
   ESP_LOGI(TAG, "  Battery Replace Status: %ld (%s)", br, br_text);
@@ -234,7 +234,7 @@ for (int start = 0; start < NSTR; start += BATCH_STR) {
   // Output Source
   long os = values_num[11];
   const char *os_text = "unknown";
-  --------------------------------
+  //--------------------------------
   if      (os == 1)  os_text = "unknown";
   else if (os == 2)  os_text = "onLine";
   else if (os == 3)  os_text = "onBattery";
