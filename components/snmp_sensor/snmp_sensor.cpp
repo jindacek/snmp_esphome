@@ -206,6 +206,25 @@ for (int start = 0; start < NSTR; start += BATCH_STR) {
   ESP_LOGI(TAG, "  Output Voltage: %ld V", values_num[5]);
   ESP_LOGI(TAG, "  Load: %ld %%", values_num[6]);
   ESP_LOGI(TAG, "  Output Status: %ld", values_num[7]);
+  // Output Status (index 7)
+  long os2 = values_num[7];
+  const char *os2_text = "unknown";
+  //--------------------------------
+  if      (os2 == 1)  os2_text = "unknown";
+  else if (os2 == 2)  os2_text = "onLine";
+  else if (os2 == 3)  os2_text = "onBattery";
+  else if (os2 == 4)  os2_text = "onSmartBoost";
+  else if (os2 == 5)  os2_text = "timedSleep";
+  else if (os2 == 6)  os2_text = "softwareSleep";
+  else if (os2 == 7)  os2_text = "off";
+  else if (os2 == 8)  os2_text = "rebooting";
+  else if (os2 == 9)  os2_text = "switchedByCommand";
+  else if (os2 == 10) os2_text = "onBypass";
+  else if (os2 == 11) os2_text = "reducingVoltage";
+  else if (os2 == 12) os2_text = "switchingToBypass";
+  else if (os2 == 13) os2_text = "onSmartTrim";
+  ESP_LOGI(TAG, "  Output Status Text: %s", os2_text);
+  // Remaining runtime (index 8)
   long rem_sec = (values_num[8] >= 0) ? (values_num[8] / 100) : -1;
   ESP_LOGI(TAG, "  Remaining Runtime: %ld Sec", rem_sec);
   ESP_LOGI(TAG, "  Remaining Runtime formatted: %s",
