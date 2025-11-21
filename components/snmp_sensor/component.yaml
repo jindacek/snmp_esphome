@@ -1,2 +1,8 @@
-name: "snmp_sensor"
-version: "1.0.0"
+dependencies:
+  - "esphome/components/network"
+  - "esphome/components/sensor"
+  - "esphome/components/api"
+  - "esphome/components/logger"
+
+codeowners:
+  - "@jindacek"
