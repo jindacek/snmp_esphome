@@ -6,6 +6,21 @@ namespace snmp_sensor {
 
 static const char *TAG = "snmp_sensor";
 
+// Convert seconds -> HHh:MMm:SSs (pro remaining runtime)
+static std::string format_runtime_hms(long seconds) {
+  if (seconds < 0) return "unknown";
+
+  long h = seconds / 3600;
+  seconds %= 3600;
+
+  long m = seconds / 60;
+  long s = seconds % 60;
+
+  char buf[32];
+  snprintf(buf, sizeof(buf), "%02ldh:%02ldm:%02lds", h, m, s);
+  return std::string(buf);
+}
+
 // Convert APC date formats to DD-MM-YYYY
 static std::string convert_apc_date(const std::string &raw) {
   if (raw.size() < 8) return raw;
@@ -76,11 +91,12 @@ void SnmpSensor::update() {
     "1.3.6.1.4.1.318.1.1.1.1.1.2.0",           // 1 Name
     "1.3.6.1.4.1.318.1.1.1.1.2.2.0",           // 2 Manufacture date
     "1.3.6.1.4.1.318.1.1.1.2.1.3.0",           // 3 Last battery replacement
-    "1.3.6.1.4.1.318.1.1.1.7.2.4.0"            // 4 Last start time
+    "1.3.6.1.4.1.318.1.1.1.7.2.4.0",           // 4 Last start time
+    "1.3.6.1.4.1.318.1.1.1.2.2.3.0"            // 8 Remaining runtime (TimeTicks)
   };
 
-  long values_num[8];
-  for (int i = 0; i < 8; i++) values_num[i] = -1;
+  long values_num[9];
+  for (int i = 0; i < 9; i++) values_num[i] = -1;
 
   std::string values_str[5];
 
@@ -153,6 +169,12 @@ void SnmpSensor::update() {
   ESP_LOGI(TAG, "  Output Voltage: %ld V", values_num[5]);
   ESP_LOGI(TAG, "  Load: %ld %%", values_num[6]);
   ESP_LOGI(TAG, "  Output Status: %ld", values_num[7]);
+  long rem_sec = (values_num[8] >= 0) ? (values_num[8] / 100) : -1;
+  ESP_LOGI(TAG, "  Remaining Runtime formatted: %s",
+         format_runtime_hms(rem_sec).c_str());
+  ESP_LOGI(TAG, "  Remaining Runtime formatted: %s",
+           format_runtime(rem_sec).c_str());
+
 
   ESP_LOGI(TAG, "  Model: %s", values_str[0].empty() ? "<none>" : values_str[0].c_str());
   ESP_LOGI(TAG, "  Name: %s", values_str[1].empty() ? "<none>" : values_str[1].c_str());
