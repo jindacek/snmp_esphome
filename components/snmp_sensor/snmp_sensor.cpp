@@ -75,7 +75,7 @@ void SnmpSensor::update() {
   }
 
   // OID seznam
-  const char *oids_num[10] = {
+  const char *oids_num[11] = {
     "1.3.6.1.2.1.1.3.0",                       // 0 Runtime (TimeTicks)
     "1.3.6.1.4.1.318.1.1.1.2.2.1.0",           // 1 Battery capacity
     "1.3.6.1.4.1.318.1.1.1.2.2.2.0",           // 2 Battery temp
@@ -85,7 +85,8 @@ void SnmpSensor::update() {
     "1.3.6.1.4.1.318.1.1.1.4.2.3.0",           // 6 Load
     "1.3.6.1.4.1.318.1.1.1.4.1.1.0",           // 7 Output status
     "1.3.6.1.4.1.318.1.1.1.2.2.3.0",           // 8 Remaining runtime (TimeTicks) 
-    "1.3.6.1.4.1.318.1.1.1.7.2.3.0"            // 9 Self test result
+    "1.3.6.1.4.1.318.1.1.1.7.2.3.0",           // 9 Self test result
+    "1.3.6.1.4.1.318.1.1.1.2.2.4.0"            // 10 Battery replace indicator
   };
 
   const char *oids_str[6] = {
@@ -97,7 +98,7 @@ void SnmpSensor::update() {
     "1.3.6.1.4.1.318.1.1.1.1.2.3.0"            // 5 Serial number
   };
 
-  long values_num[10];
+  long values_num[11];
   for (int i = 0; i < 9; i++) values_num[i] = -1;
 
   std::string values_str[6];
@@ -208,6 +209,7 @@ for (int start = 0; start < NSTR; start += BATCH_STR) {
   ESP_LOGI(TAG, "  Remaining Runtime: %ld Sec", rem_sec);
   ESP_LOGI(TAG, "  Remaining Runtime formatted: %s",
            format_runtime_hms(rem_sec).c_str());
+  
   // Self-test result (index 9)
   long st = values_num[9];
   const char *st_text = "unknown";  
@@ -218,6 +220,13 @@ for (int start = 0; start < NSTR; start += BATCH_STR) {
   else if (st == 5) st_text = "Aborted";
   else if (st == 6) st_text = "Not supported"; 
   ESP_LOGI(TAG, "  Last Self-Test Result: %ld (%s)", st, st_text);
+  
+  // Battery replace indicator (index 10)
+  long br = values_num[10];
+  const char *br_text = "unknown";
+  if      (br == 1) br_text = "OK";
+  else if (br == 2) br_text = "Replace battery";
+  ESP_LOGI(TAG, "  Battery Replace Status: %ld (%s)", br, br_text);
 
 
 
