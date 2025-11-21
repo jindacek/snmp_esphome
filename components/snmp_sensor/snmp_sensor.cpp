@@ -87,7 +87,7 @@ void SnmpSensor::update() {
     "1.3.6.1.4.1.318.1.1.1.2.2.3.0"            // 8 Remaining runtime (TimeTicks)  
   };
 
-  const char *oids_str[5] = {
+  const char *oids_str[6] = {
     "1.3.6.1.4.1.318.1.1.1.1.1.1.0",           // 0 Model
     "1.3.6.1.4.1.318.1.1.1.1.1.2.0",           // 1 Name
     "1.3.6.1.4.1.318.1.1.1.1.2.2.0",           // 2 Manufacture date
