@@ -75,7 +75,7 @@ void SnmpSensor::update() {
   }
 
   // OID seznam
-  const char *oids_num[11] = {
+  const char *oids_num[12] = {
     "1.3.6.1.2.1.1.3.0",                       // 0 Runtime (TimeTicks)
     "1.3.6.1.4.1.318.1.1.1.2.2.1.0",           // 1 Battery capacity
     "1.3.6.1.4.1.318.1.1.1.2.2.2.0",           // 2 Battery temp
@@ -86,7 +86,8 @@ void SnmpSensor::update() {
     "1.3.6.1.4.1.318.1.1.1.4.1.1.0",           // 7 Output status
     "1.3.6.1.4.1.318.1.1.1.2.2.3.0",           // 8 Remaining runtime (TimeTicks) 
     "1.3.6.1.4.1.318.1.1.1.7.2.3.0",           // 9 Self test result
-    "1.3.6.1.4.1.318.1.1.1.2.2.4.0"            // 10 Battery replace indicator
+    "1.3.6.1.4.1.318.1.1.1.2.2.4.0",           // 10 Battery replace indicator
+    "1.3.6.1.4.1.318.1.1.1.4.1.2.0"            // 11 Output Source (integer)
   };
 
   const char *oids_str[6] = {
@@ -212,7 +213,8 @@ for (int start = 0; start < NSTR; start += BATCH_STR) {
   
   // Self-test result (index 9)
   long st = values_num[9];
-  const char *st_text = "unknown";  
+  const char *st_text = "unknown";
+  --------------------------------
   if      (st == 1) st_text = "Passed";
   else if (st == 2) st_text = "Failed";
   else if (st == 3) st_text = "Invalid";
@@ -224,10 +226,30 @@ for (int start = 0; start < NSTR; start += BATCH_STR) {
   // Battery replace indicator (index 10)
   long br = values_num[10];
   const char *br_text = "unknown";
+  --------------------------------
   if      (br == 1) br_text = "OK";
   else if (br == 2) br_text = "Replace battery";
   ESP_LOGI(TAG, "  Battery Replace Status: %ld (%s)", br, br_text);
 
+  // Output Source
+  long os = values_num[11];
+  const char *os_text = "unknown";
+  --------------------------------
+  if      (os == 1)  os_text = "unknown";
+  else if (os == 2)  os_text = "onLine";
+  else if (os == 3)  os_text = "onBattery";
+  else if (os == 4)  os_text = "onSmartBoost";
+  else if (os == 5)  os_text = "timedSleep";
+  else if (os == 6)  os_text = "softwareSleep";
+  else if (os == 7)  os_text = "off";
+  else if (os == 8)  os_text = "rebooting";
+  else if (os == 9)  os_text = "switchedByCommand";
+  else if (os == 10) os_text = "onBypass";
+  else if (os == 11) os_text = "reducingVoltage";
+  else if (os == 12) os_text = "switchingToBypass";
+  else if (os == 13) os_text = "onSmartTrim";
+  ESP_LOGI(TAG, "  Output Source: %ld (%s)", os, os_text);
+  
 
 
 
