@@ -92,7 +92,7 @@ void SnmpSensor::update() {
     "1.3.6.1.4.1.318.1.1.1.1.1.2.0",           // 1 Name
     "1.3.6.1.4.1.318.1.1.1.1.2.2.0",           // 2 Manufacture date
     "1.3.6.1.4.1.318.1.1.1.2.1.3.0",           // 3 Last battery replacement
-    "1.3.6.1.4.1.318.1.1.1.7.2.4.0"            // 4 Last start time
+    "1.3.6.1.4.1.318.1.1.1.7.2.4.0"            // 4 Last self test date
   };
 
   long values_num[9];
@@ -184,7 +184,7 @@ void SnmpSensor::update() {
   ESP_LOGI(TAG, "  Last Battery Replacement: %s",
            values_str[3].empty() ? "<none>" : convert_apc_date(values_str[3]).c_str());
 
-  ESP_LOGI(TAG, "  Last Start Time: %s",
+  ESP_LOGI(TAG, "  Last Self Test: %s",
            values_str[4].empty() ? "<none>" : convert_apc_date(values_str[4]).c_str());
 
 }
