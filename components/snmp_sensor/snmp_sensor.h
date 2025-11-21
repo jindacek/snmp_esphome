@@ -1,6 +1,4 @@
 #pragma once
-
-#include <string>
 #include "esphome/core/component.h"
 #include "esphome/components/sensor/sensor.h"
 #include "snmp_client.h"
@@ -8,48 +6,22 @@
 namespace esphome {
 namespace snmp_sensor {
 
-class SnmpSensor : public PollingComponent {
+class SnmpSensor : public sensor::Sensor, public PollingComponent {
  public:
-  // Host + community setters
   void set_host(const std::string &h) { host_ = h; }
   void set_community(const std::string &c) { community_ = c; }
-
-  // Numeric sensors (zatím nepoužité – publish uděláme později)
-  void set_runtime_sensor(sensor::Sensor *s) { runtime_sensor_ = s; }
-  void set_battery_capacity_sensor(sensor::Sensor *s) { battery_capacity_sensor_ = s; }
-  void set_battery_temp_sensor(sensor::Sensor *s) { battery_temp_sensor_ = s; }
-  void set_battery_voltage_sensor(sensor::Sensor *s) { battery_voltage_sensor_ = s; }
-  void set_input_voltage_sensor(sensor::Sensor *s) { input_voltage_sensor_ = s; }
-  void set_output_voltage_sensor(sensor::Sensor *s) { output_voltage_sensor_ = s; }
-  void set_load_sensor(sensor::Sensor *s) { load_sensor_ = s; }
-  void set_output_status_sensor(sensor::Sensor *s) { output_status_sensor_ = s; }
-  void set_remaining_runtime_sensor(sensor::Sensor *s) { remaining_runtime_sensor_ = s; }
-  void set_output_frequency_sensor(sensor::Sensor *s) { output_frequency_sensor_ = s; }
-  void set_selftest_result_sensor(sensor::Sensor *s) { selftest_result_sensor_ = s; }
-  void set_selftest_duration_sensor(sensor::Sensor *s) { selftest_duration_sensor_ = s; }
+  void set_oid(const std::string &o) { oid_ = o; }
 
   void setup() override;
   void update() override;
 
- protected:
+ private:
   std::string host_;
   std::string community_;
+  std::string oid_;
 
   SnmpClient snmp_;
-
-  // numeric sensors
-  sensor::Sensor *runtime_sensor_{nullptr};
-  sensor::Sensor *battery_capacity_sensor_{nullptr};
-  sensor::Sensor *battery_temp_sensor_{nullptr};
-  sensor::Sensor *battery_voltage_sensor_{nullptr};
-  sensor::Sensor *input_voltage_sensor_{nullptr};
-  sensor::Sensor *output_voltage_sensor_{nullptr};
-  sensor::Sensor *load_sensor_{nullptr};
-  sensor::Sensor *output_status_sensor_{nullptr};
-  sensor::Sensor *remaining_runtime_sensor_{nullptr};
-  sensor::Sensor *output_frequency_sensor_{nullptr};
-  sensor::Sensor *selftest_result_sensor_{nullptr};
-  sensor::Sensor *selftest_duration_sensor_{nullptr};
+  bool snmp_initialized_ = false;
 };
 
 }  // namespace snmp_sensor
