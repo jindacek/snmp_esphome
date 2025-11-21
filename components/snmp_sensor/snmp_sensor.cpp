@@ -147,7 +147,7 @@ void SnmpSensor::update() {
       host_.c_str(),
       community_.c_str(),
       oids_str,
-      5,
+      6,
       values_str
   );
 
@@ -187,6 +187,10 @@ void SnmpSensor::update() {
 
   ESP_LOGI(TAG, "  Last Self Test: %s",
            values_str[4].empty() ? "<none>" : convert_apc_date(values_str[4]).c_str());
+
+  ESP_LOGI(TAG, "  Serial Number: %s",
+           values_str[5].empty() ? "<none>" : values_str[5].c_str());
+  
 
 }
 
