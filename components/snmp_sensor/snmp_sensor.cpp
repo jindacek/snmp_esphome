@@ -107,10 +107,10 @@ void SnmpSensor::update() {
   const int BATCH = 3;
   bool any_ok_num = false;
 
-  for (int start = 0; start < 8; start += BATCH) {
+  for (int start = 0; start < 9; start += BATCH) {
     int batch_count = BATCH;
-    if (start + batch_count > 8)
-      batch_count = 8 - start;
+    if (start + batch_count > 9)
+      batch_count = 9 - start;
 
     const char *batch_oids[BATCH];
     long batch_vals[BATCH];
