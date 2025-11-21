@@ -184,7 +184,7 @@ for (int start = 0; start < NSTR; start += BATCH_STR) {
 }
 
 
-  if (!any_ok_num && !ok_str) {
+  if (!any_ok_num && !any_ok_str) {
     ESP_LOGW(TAG, "SNMP MULTI-GET FAILED (numeric + string)");
     return;
   }
