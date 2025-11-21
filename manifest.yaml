@@ -1,11 +1,14 @@
 name: snmp_sensor
 version: 1.0.0
-components:
-  - components/snmp_sensor
-files:
-  include:
-    - components/snmp_sensor/**
-build:
-  libraries:
-    - "staianoweb/Arduino SNMP"
 
+build:
+  include:
+    - components/snmp_sensor
+  libraries:
+    - staianoweb/Arduino SNMP
+
+dependencies:
+  esphome:
+    components:
+      - sensor
+      - text_sensor
