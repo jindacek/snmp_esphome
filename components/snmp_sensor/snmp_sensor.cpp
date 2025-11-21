@@ -170,10 +170,9 @@ void SnmpSensor::update() {
   ESP_LOGI(TAG, "  Load: %ld %%", values_num[6]);
   ESP_LOGI(TAG, "  Output Status: %ld", values_num[7]);
   long rem_sec = (values_num[8] >= 0) ? (values_num[8] / 100) : -1;
+  ESP_LOGI(TAG, "  Remaining Runtime: %ld Sec", rem_sec);
   ESP_LOGI(TAG, "  Remaining Runtime formatted: %s",
-         format_runtime_hms(rem_sec).c_str());
-  ESP_LOGI(TAG, "  Remaining Runtime formatted: %s",
-           format_runtime(rem_sec).c_str());
+           format_runtime_hms(rem_sec).c_str());
 
 
   ESP_LOGI(TAG, "  Model: %s", values_str[0].empty() ? "<none>" : values_str[0].c_str());
