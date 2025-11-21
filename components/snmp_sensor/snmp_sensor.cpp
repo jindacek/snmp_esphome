@@ -143,13 +143,46 @@ void SnmpSensor::update() {
   }
 
   // -------- Stringové hodnoty – jedním dotazem --------
-  bool ok_str = snmp_.get_many_string(
+// -------- Stringové hodnoty – BATCH 3+3 OID --------
+const int NSTR = 6;
+const int BATCH_STR = 3;
+bool any_ok_str = false;
+
+for (int start = 0; start < NSTR; start += BATCH_STR) {
+  int batch_count = BATCH_STR;
+  if (start + batch_count > NSTR)
+    batch_count = NSTR - start;
+
+  const char *batch_oids[BATCH_STR];
+  std::string batch_vals[BATCH_STR];
+
+  for (int i = 0; i < batch_count; i++) {
+    batch_oids[i] = oids_str[start + i];
+    batch_vals[i] = "";
+  }
+
+  bool ok = snmp_.get_many_string(
       host_.c_str(),
       community_.c_str(),
-      oids_str,
-      6,
-      values_str
+      batch_oids,
+      batch_count,
+      batch_vals
   );
+
+  if (!ok) {
+    ESP_LOGW(TAG, "SNMP MULTI-GET (string) batch %d..%d FAILED",
+             start, start + batch_count - 1);
+    continue;
+  }
+
+  any_ok_str = true;
+
+  // zkopírovat výsledky zpět
+  for (int i = 0; i < batch_count; i++) {
+    values_str[start + i] = batch_vals[i];
+  }
+}
+
 
   if (!any_ok_num && !ok_str) {
     ESP_LOGW(TAG, "SNMP MULTI-GET FAILED (numeric + string)");
