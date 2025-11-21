@@ -207,6 +207,20 @@ for (int start = 0; start < NSTR; start += BATCH_STR) {
   ESP_LOGI(TAG, "  Input Voltage: %ld V", values_num[4]);
   ESP_LOGI(TAG, "  Output Voltage: %ld V", values_num[5]);
   ESP_LOGI(TAG, "  Load: %ld %%", values_num[6]);
+
+  if (battery_voltage_sensor_ != nullptr && values_num[3] >= 0)
+      battery_voltage_sensor_->publish_state(values_num[3]);
+
+  if (input_voltage_sensor_ != nullptr && values_num[4] >= 0)
+      input_voltage_sensor_->publish_state(values_num[4]);
+
+  if (output_voltage_sensor_ != nullptr && values_num[5] >= 0)
+      output_voltage_sensor_->publish_state(values_num[5]);
+
+  if (load_sensor_ != nullptr && values_num[6] >= 0)
+      load_sensor_->publish_state(values_num[6]);
+
+  
   ESP_LOGI(TAG, "  Output Status: %ld", values_num[7]);
   // Output Status (index 7)
   long os2 = values_num[7];
