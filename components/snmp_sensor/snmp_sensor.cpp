@@ -83,7 +83,8 @@ void SnmpSensor::update() {
     "1.3.6.1.4.1.318.1.1.1.3.2.1.0",           // 4 Input voltage
     "1.3.6.1.4.1.318.1.1.1.4.2.1.0",           // 5 Output voltage
     "1.3.6.1.4.1.318.1.1.1.4.2.3.0",           // 6 Load
-    "1.3.6.1.4.1.318.1.1.1.4.1.1.0"            // 7 Output status
+    "1.3.6.1.4.1.318.1.1.1.4.1.1.0",           // 7 Output status
+    "1.3.6.1.4.1.318.1.1.1.2.2.3.0"            // 8 Remaining runtime (TimeTicks)  
   };
 
   const char *oids_str[5] = {
@@ -91,8 +92,7 @@ void SnmpSensor::update() {
     "1.3.6.1.4.1.318.1.1.1.1.1.2.0",           // 1 Name
     "1.3.6.1.4.1.318.1.1.1.1.2.2.0",           // 2 Manufacture date
     "1.3.6.1.4.1.318.1.1.1.2.1.3.0",           // 3 Last battery replacement
-    "1.3.6.1.4.1.318.1.1.1.7.2.4.0",           // 4 Last start time
-    "1.3.6.1.4.1.318.1.1.1.2.2.3.0"            // 8 Remaining runtime (TimeTicks)
+    "1.3.6.1.4.1.318.1.1.1.7.2.4.0"            // 4 Last start time
   };
 
   long values_num[9];
