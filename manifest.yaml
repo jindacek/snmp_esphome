@@ -1,18 +1,11 @@
-name: "snmp_sensor"
-version: "1.0.0"
-authors: ["Velitel & ChatGPT"]
-
+name: snmp_sensor
+version: 1.0.0
+components:
+  - components/snmp_sensor
 files:
-  - snmp_sensor.cpp
-  - snmp_sensor.h
-  - snmp_client.cpp
-  - snmp_client.h
-  - sensor.py
-  - __init__.py
+  include:
+    - components/snmp_sensor/**
+build:
+  libraries:
+    - "staianoweb/Arduino SNMP"
 
-requirements: []
-
-esphome:
-  # hlavní entrypoint komponenty
-  components:
-    - snmp_sensor
