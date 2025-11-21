@@ -99,7 +99,7 @@ void SnmpSensor::update() {
   };
 
   long values_num[11];
-  for (int i = 0; i < 9; i++) values_num[i] = -1;
+  for (int i = 0; i < 11; i++) values_num[i] = -1;
 
   std::string values_str[6];
 
@@ -110,10 +110,10 @@ void SnmpSensor::update() {
   const int BATCH = 3;
   bool any_ok_num = false;
 
-  for (int start = 0; start < 9; start += BATCH) {
+  for (int start = 0; start < 11; start += BATCH) {
     int batch_count = BATCH;
-    if (start + batch_count > 9)
-      batch_count = 9 - start;
+    if (start + batch_count > 11)
+      batch_count = 11 - start;
 
     const char *batch_oids[BATCH];
     long batch_vals[BATCH];
