@@ -265,6 +265,7 @@ bool SnmpClient::get_many_string(const char *host,
                                  int count,
                                  std::string *values)
 {
+  // Inicializace výstupu
   for (int i = 0; i < count; i++)
     values[i].clear();
 
@@ -272,7 +273,8 @@ bool SnmpClient::get_many_string(const char *host,
   if (!ip.fromString(host)) return false;
 
   uint8_t packet[512];
-  int plen = build_snmp_get_packet_multi(packet, sizeof(packet), community, oids, count);
+  int plen = build_snmp_get_packet_multi(packet, sizeof(packet),
+                                         community, oids, count);
   if (plen <= 0) return false;
 
   udp_.beginPacket(ip, 161);
@@ -294,20 +296,36 @@ bool SnmpClient::get_many_string(const char *host,
     int pos = 0;
     while (pos < n - 4) {
 
-      if (resp[pos] == 0x06) {  // OID
+      if (resp[pos] == 0x06) {        // OID
         int oid_len = resp[pos+1];
         const uint8_t *oid_ptr = &resp[pos+2];
 
+        // Hodnotová část
         int val_tlv = pos + 2 + oid_len;
+
+        // Odstranění NULL paddingu
         if (resp[val_tlv] == 0x05 && resp[val_tlv+1] == 0x00)
           val_tlv += 2;
 
         uint8_t vtag = resp[val_tlv];
-        uint8_t vlen = resp[val_tlv+1];
+        uint8_t vlen = resp[val_tlv + 1];
 
-        if (vtag == 0x04) {  // OCTET STRING
-          std::string s((char*)&resp[val_tlv+2], vlen);
+        // Hledáme pouze OCTET STRING (0x04)
+        if (vtag == 0x04) {
 
+          std::string s;
+          s.reserve(vlen);
+
+          int base = val_tlv + 2;
+          for (int j = 0; j < vlen; j++) {
+            uint8_t b = resp[base + j];
+
+            // odstranění ne-ASCII bordelu
+            if (b >= 32 && b <= 126)
+              s.push_back((char)b);
+          }
+
+          // Porovnání OID
           for (int i = 0; i < count; i++) {
             uint8_t expected[64];
             int elen = encode_oid(oids[i], expected, sizeof(expected));
