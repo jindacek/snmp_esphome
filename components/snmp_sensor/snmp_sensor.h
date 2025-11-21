@@ -2,6 +2,7 @@
 
 #include "esphome/core/component.h"
 #include "esphome/components/sensor/sensor.h"
+#include "esphome/components/text_sensor/text_sensor.h"
 #include "snmp_client.h"
 
 namespace esphome {
@@ -12,7 +13,7 @@ class SnmpSensor : public PollingComponent {
   void set_host(const std::string &h) { host_ = h; }
   void set_community(const std::string &c) { community_ = c; }
 
-  // setters pro pod-senzory (numeric only)
+  // ---- numeric child sensors ----
   void set_runtime_sensor(sensor::Sensor *s) { runtime_sensor_ = s; }
   void set_battery_capacity_sensor(sensor::Sensor *s) { battery_capacity_sensor_ = s; }
   void set_battery_temp_sensor(sensor::Sensor *s) { battery_temp_sensor_ = s; }
@@ -28,6 +29,18 @@ class SnmpSensor : public PollingComponent {
   void set_input_frequency_sensor(sensor::Sensor *s) { input_frequency_sensor_ = s; }
   void set_output_frequency_sensor(sensor::Sensor *s) { output_frequency_sensor_ = s; }
 
+  // ---- text child sensors (volitelné) ----
+  void set_model_text_sensor(text_sensor::TextSensor *s) { model_text_sensor_ = s; }
+  void set_ups_name_text_sensor(text_sensor::TextSensor *s) { ups_name_text_sensor_ = s; }
+  void set_manufacture_date_text_sensor(text_sensor::TextSensor *s) { manufacture_date_text_sensor_ = s; }
+  void set_last_battery_replacement_text_sensor(text_sensor::TextSensor *s) { last_battery_replacement_text_sensor_ = s; }
+  void set_last_self_test_text_sensor(text_sensor::TextSensor *s) { last_self_test_text_sensor_ = s; }
+  void set_serial_number_text_sensor(text_sensor::TextSensor *s) { serial_number_text_sensor_ = s; }
+
+  void set_output_status_text_sensor(text_sensor::TextSensor *s) { output_status_text_sensor_ = s; }
+  void set_runtime_formatted_text_sensor(text_sensor::TextSensor *s) { runtime_formatted_text_sensor_ = s; }
+  void set_remaining_runtime_formatted_text_sensor(text_sensor::TextSensor *s) { remaining_runtime_formatted_text_sensor_ = s; }
+
   void setup() override;
   void update() override;
 
@@ -35,7 +48,7 @@ class SnmpSensor : public PollingComponent {
   std::string host_;
   std::string community_;
 
-  // numeric child sensors
+  // numeric
   sensor::Sensor *runtime_sensor_{nullptr};
   sensor::Sensor *battery_capacity_sensor_{nullptr};
   sensor::Sensor *battery_temp_sensor_{nullptr};
@@ -50,6 +63,18 @@ class SnmpSensor : public PollingComponent {
   sensor::Sensor *output_source_sensor_{nullptr};
   sensor::Sensor *input_frequency_sensor_{nullptr};
   sensor::Sensor *output_frequency_sensor_{nullptr};
+
+  // text
+  text_sensor::TextSensor *model_text_sensor_{nullptr};
+  text_sensor::TextSensor *ups_name_text_sensor_{nullptr};
+  text_sensor::TextSensor *manufacture_date_text_sensor_{nullptr};
+  text_sensor::TextSensor *last_battery_replacement_text_sensor_{nullptr};
+  text_sensor::TextSensor *last_self_test_text_sensor_{nullptr};
+  text_sensor::TextSensor *serial_number_text_sensor_{nullptr};
+
+  text_sensor::TextSensor *output_status_text_sensor_{nullptr};
+  text_sensor::TextSensor *runtime_formatted_text_sensor_{nullptr};
+  text_sensor::TextSensor *remaining_runtime_formatted_text_sensor_{nullptr};
 
   SnmpClient snmp_;
   bool snmp_initialized_{false};
