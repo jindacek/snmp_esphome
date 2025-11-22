@@ -41,8 +41,13 @@ class SnmpSensor : public PollingComponent {
   void set_output_status_text_sensor(text_sensor::TextSensor *s) { output_status_text_sensor_ = s; }
   void set_runtime_formatted_text_sensor(text_sensor::TextSensor *s) { runtime_formatted_text_sensor_ = s; }
   void set_remaining_runtime_formatted_text_sensor(text_sensor::TextSensor *s) { remaining_runtime_formatted_text_sensor_ = s; }
-
   void set_ups_state_text_sensor(text_sensor::TextSensor *s) { ups_state_text_sensor_ = s; }
+
+  // ---- binary child sensors (volitelné) ----
+  void set_on_battery_binary(binary_sensor::BinarySensor *s) { on_battery_binary_ = s; }
+  void set_charging_binary(binary_sensor::BinarySensor *s) { charging_binary_ = s; }
+  void set_discharging_binary(binary_sensor::BinarySensor *s) { discharging_binary_ = s; }
+  void set_battery_full_binary(binary_sensor::BinarySensor *s) { battery_full_binary_ = s; }
 
   void setup() override;
   void update() override;
@@ -78,6 +83,13 @@ class SnmpSensor : public PollingComponent {
   text_sensor::TextSensor *output_status_text_sensor_{nullptr};
   text_sensor::TextSensor *runtime_formatted_text_sensor_{nullptr};
   text_sensor::TextSensor *remaining_runtime_formatted_text_sensor_{nullptr};
+  text_sensor::TextSensor *ups_state_text_sensor_{nullptr};
+
+  // binary
+  binary_sensor::BinarySensor *on_battery_binary_{nullptr};
+  binary_sensor::BinarySensor *charging_binary_{nullptr};
+  binary_sensor::BinarySensor *discharging_binary_{nullptr};
+  binary_sensor::BinarySensor *battery_full_binary_{nullptr};
 
   SnmpClient snmp_;
   bool snmp_initialized_{false};
