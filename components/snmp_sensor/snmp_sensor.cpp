@@ -230,6 +230,34 @@ void SnmpSensor::update() {
   if (output_status_text_sensor_) output_status_text_sensor_->publish_state(os_text);
   if (runtime_formatted_text_sensor_) runtime_formatted_text_sensor_->publish_state(runtime_fmt);
   if (remaining_runtime_formatted_text_sensor_) remaining_runtime_formatted_text_sensor_->publish_state(rem_fmt);
+
+// ---- derived binary states ----
+bool on_battery = (values_num[7] == 3);
+bool online = (values_num[7] == 2);
+int capacity = values_num[1];
+
+bool charging = (online && capacity < 100);
+bool discharging = on_battery;
+bool battery_full = (online && capacity == 100);
+
+if (on_battery_binary_) on_battery_binary_->publish_state(on_battery);
+if (charging_binary_) charging_binary_->publish_state(charging);
+if (discharging_binary_) discharging_binary_->publish_state(discharging);
+if (battery_full_binary_) battery_full_binary_->publish_state(battery_full);
+
+// ---- UPS State Text Sensor ----
+std::string ups_state = "Unknown";
+if (on_battery) {
+  ups_state = "On Battery";
+} else if (online) {
+  if (capacity == 100)
+    ups_state = "Online";
+  else
+    ups_state = "Charging";
+}
+if (ups_state_text_sensor_) ups_state_text_sensor_->publish_state(ups_state);
+
+
 }
 
 }  // namespace snmp_sensor
