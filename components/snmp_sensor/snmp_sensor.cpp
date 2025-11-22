@@ -1,5 +1,7 @@
 #include "snmp_sensor.h"
 #include "esphome/core/log.h"
+#include "esphome/components/binary_sensor/binary_sensor.h"
+
 
 namespace esphome {
 namespace snmp_sensor {
