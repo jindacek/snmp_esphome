@@ -12,4 +12,3 @@ dependencies:
     components:
       - sensor
       - text_sensor
-      - binary_sensor
