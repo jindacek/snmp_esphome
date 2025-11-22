@@ -1,6 +1,6 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
-from esphome.components import sensor, text_sensor, binary_sensor
+from esphome.components import sensor, text_sensor
 from esphome.const import (
     CONF_ID,
     CONF_UNIT_OF_MEASUREMENT,
@@ -10,7 +10,7 @@ from esphome.const import (
 
 from . import snmp_ns
 
-AUTO_LOAD = ["sensor", "text_sensor", "binary_sensor"]
+AUTO_LOAD = ["sensor", "text_sensor"]
 
 CONF_HOST = "host"
 CONF_COMMUNITY = "community"
@@ -42,12 +42,6 @@ CONF_OUTPUT_STATUS_TEXT = "output_status_text"
 CONF_RUNTIME_FORMATTED = "runtime_formatted"
 CONF_REMAINING_RUNTIME_FORMATTED = "remaining_runtime_formatted"
 
-# binary keys
-CONF_ON_BATTERY = "on_battery"
-CONF_CHARGING = "charging"
-CONF_DISCHARGING = "discharging"
-CONF_BATTERY_FULL = "battery_full"
-
 SnmpSensor = snmp_ns.class_("SnmpSensor", cg.PollingComponent)
 
 NUM_SENSOR_SCHEMA = sensor.sensor_schema().extend(
@@ -57,7 +51,6 @@ NUM_SENSOR_SCHEMA = sensor.sensor_schema().extend(
     }
 )
 TEXT_SENSOR_SCHEMA = text_sensor.text_sensor_schema()
-BINARY_SENSOR_SCHEMA = binary_sensor.binary_sensor_schema()
 
 CONFIG_SCHEMA = cv.Schema(
     {
@@ -91,12 +84,6 @@ CONFIG_SCHEMA = cv.Schema(
         cv.Optional(CONF_OUTPUT_STATUS_TEXT): TEXT_SENSOR_SCHEMA,
         cv.Optional(CONF_RUNTIME_FORMATTED): TEXT_SENSOR_SCHEMA,
         cv.Optional(CONF_REMAINING_RUNTIME_FORMATTED): TEXT_SENSOR_SCHEMA,
-
-        # binary
-        cv.Optional(CONF_ON_BATTERY): BINARY_SENSOR_SCHEMA,
-        cv.Optional(CONF_CHARGING): BINARY_SENSOR_SCHEMA,
-        cv.Optional(CONF_DISCHARGING): BINARY_SENSOR_SCHEMA,
-        cv.Optional(CONF_BATTERY_FULL): BINARY_SENSOR_SCHEMA,
     }
 ).extend(cv.polling_component_schema("10s"))
 
@@ -116,11 +103,6 @@ async def to_code(config):
     async def add_txt(key, setter):
         if key in config:
             sens = await text_sensor.new_text_sensor(config[key])
-            cg.add(setter(sens))
-
-    async def add_bin(key, setter):
-        if key in config:
-            sens = await binary_sensor.new_binary_sensor(config[key])
             cg.add(setter(sens))
 
     # numeric
@@ -149,9 +131,3 @@ async def to_code(config):
     await add_txt(CONF_OUTPUT_STATUS_TEXT, var.set_output_status_text_sensor)
     await add_txt(CONF_RUNTIME_FORMATTED, var.set_runtime_formatted_text_sensor)
     await add_txt(CONF_REMAINING_RUNTIME_FORMATTED, var.set_remaining_runtime_formatted_text_sensor)
-
-    # binary
-    await add_bin(CONF_ON_BATTERY, var.set_on_battery_binary)
-    await add_bin(CONF_CHARGING, var.set_charging_binary)
-    await add_bin(CONF_DISCHARGING, var.set_discharging_binary)
-    await add_bin(CONF_BATTERY_FULL, var.set_battery_full_binary)
