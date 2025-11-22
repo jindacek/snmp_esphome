@@ -3,6 +3,7 @@
 #include "esphome/core/component.h"
 #include "esphome/components/sensor/sensor.h"
 #include "esphome/components/text_sensor/text_sensor.h"
+#include "esphome/components/binary_sensor/binary_sensor.h"
 #include "snmp_client.h"
 
 namespace esphome {
@@ -41,6 +42,10 @@ class SnmpSensor : public PollingComponent {
   void set_runtime_formatted_text_sensor(text_sensor::TextSensor *s) { runtime_formatted_text_sensor_ = s; }
   void set_remaining_runtime_formatted_text_sensor(text_sensor::TextSensor *s) { remaining_runtime_formatted_text_sensor_ = s; }
 
+  // ---- binary child sensors (odvozené ze statusu) ----
+  void set_on_battery_binary_sensor(binary_sensor::BinarySensor *s) { on_battery_binary_sensor_ = s; }
+  void set_online_binary_sensor(binary_sensor::BinarySensor *s) { online_binary_sensor_ = s; }
+
   void setup() override;
   void update() override;
 
@@ -75,6 +80,10 @@ class SnmpSensor : public PollingComponent {
   text_sensor::TextSensor *output_status_text_sensor_{nullptr};
   text_sensor::TextSensor *runtime_formatted_text_sensor_{nullptr};
   text_sensor::TextSensor *remaining_runtime_formatted_text_sensor_{nullptr};
+
+  // binary
+  binary_sensor::BinarySensor *on_battery_binary_sensor_{nullptr};
+  binary_sensor::BinarySensor *online_binary_sensor_{nullptr};
 
   SnmpClient snmp_;
   bool snmp_initialized_{false};
